@@ -1,0 +1,29 @@
+{
+  "name": "ows",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "x402",
+    "evm",
+    "sepolia",
+    "wallet",
+    "ai-agent"
+  ],
+  "author": "",
+  "license": "ISC",
+  "description": "EVOLU-A — AI agent simulator with x402 payments on Sepolia EVM",
+  "dependencies": {
+    "@open-wallet-standard/core": "^1.2.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.0",
+    "express": "^5.2.1",
+    "viem": "^2.47.6",
+    "x402": "^1.1.0",
+    "x402-fetch": "^1.1.0"
+  }
+}

@@ -1,0 +1,341 @@
+:root {
+    --bg-dark: #0a0a12;
+    --bg-panel: rgba(15, 15, 25, 0.6);
+    --panel-border: rgba(255, 255, 255, 0.1);
+    --text-main: #c3d2e6;
+    --text-dim: #5a697d;
+    --accent: #469bff;
+    --success: #4bd77d;
+    --error: #ff4b4b;
+    --gold: #ffc332;
+    --thinking: #ffe632;
+    --glow-spread: 15px;
+    
+    --font-ui: 'Inter', system-ui, sans-serif;
+    --font-mono: 'Fira Code', monospace;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    font-family: var(--font-ui);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Immersive 4k Space Glassmorphism Background */
+    background-image: url('assets/site_bg.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* Glassmorphism Generic Panel */
+.glass-panel {
+    background: var(--bg-panel);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--panel-border);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    border-radius: 12px;
+}
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(5px);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.3s ease;
+}
+
+.modal-content {
+    padding: 32px;
+    width: 400px;
+    text-align: center;
+}
+
+.modal-content h2 {
+    color: var(--accent);
+    margin-bottom: 8px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.modal-content p {
+    font-size: 14px;
+    margin-bottom: 24px;
+    color: var(--text-main);
+}
+
+.modal-content .subtitle {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 20px;
+}
+
+input[type="password"] {
+    width: 100%;
+    padding: 12px 16px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    color: var(--text-main);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    margin-bottom: 24px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+input[type="password"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 8px rgba(70, 155, 255, 0.3);
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.btn-primary:hover {
+    background: #3a82df;
+    transform: translateY(-1px);
+}
+
+.btn-primary:active {
+    transform: translateY(1px);
+}
+
+/* Main Layout */
+.app-container {
+    display: flex;
+    width: 100%;
+    max-width: 1400px;
+    height: 100vh;
+    padding: 24px;
+    gap: 24px;
+}
+
+/* Canvas Area */
+.canvas-wrapper {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--panel-border);
+}
+
+#gameCanvas {
+    /* Dimensions controlled by JS, scaling controlled here */
+    image-rendering: pixelated;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.controls-overlay {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--text-dim);
+    display: flex;
+    gap: 16px;
+    border-radius: 8px;
+}
+
+.control-key {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--text-main);
+    font-family: var(--font-mono);
+    font-size: 11px;
+}
+
+/* Side Panel */
+.side-panel {
+    width: 380px;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    gap: 24px;
+}
+
+header h1 {
+    color: var(--accent);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+header .subtitle {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+}
+
+.contract-info {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 16px;
+    border-top: 1px solid var(--panel-border);
+    font-size: 14px;
+    color: var(--text-dim);
+}
+
+.contract-info .highlight {
+    color: var(--text-main);
+    font-family: var(--font-mono);
+}
+
+/* Agents List */
+.agents-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.agents-section h2, .log-section h2 {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--text-main);
+}
+
+.agents-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.agent-card {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 12px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.agent-card.thinking {
+    box-shadow: 0 0 10px rgba(255, 230, 50, 0.2);
+    border-color: rgba(255, 230, 50, 0.5);
+}
+
+.agent-card.dead {
+    opacity: 0.5;
+    filter: grayscale(1);
+}
+
+.agent-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.agent-name {
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.agent-status {
+    font-size: 12px;
+    font-family: var(--font-mono);
+    color: var(--thinking);
+    animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.agent-stage {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+}
+
+.agent-wallet {
+    font-size: 13px;
+    font-family: var(--font-mono);
+    margin-bottom: 8px;
+}
+
+.agent-inventory {
+    font-size: 11px;
+    color: var(--text-dim);
+    word-break: break-all;
+}
+
+/* Log Section */
+.log-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0; /* needed for nested scroll to work */
+}
+
+.log-container {
+    flex: 1;
+    overflow-y: auto;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.6;
+    padding-right: 8px;
+    display: flex;
+    flex-direction: column-reverse; /* Bottom fills up first */
+}
+
+.log-container::-webkit-scrollbar {
+    width: 4px;
+}
+.log-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+.log-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+}
+
+.log-entry {
+    padding: 2px 0;
+    opacity: 0.9;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 0.9; transform: translateY(0); }
+}
+
+.hidden {
+    display: none !important;
+}

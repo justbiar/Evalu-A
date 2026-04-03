@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evolu-A | AI Agent Evolution Simulator</title>
+    <meta name="description" content="An autonomous AI agent evolution simulator powered by OWS wallets and x402 payment protocol.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&family=Barlow+Condensed:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="landing.css">
+</head>
+<body>
+
+<!-- Animated Background Canvas -->
+<canvas id="bgCanvas"></canvas>
+<div class="scanlines"></div>
+
+<!-- ─── META BAR ───────────────────────────────────────────────── -->
+<div class="meta-bar">
+    <div class="meta-col">
+        <span class="meta-label">Concept</span>
+        <span class="meta-value">GAME HUD</span>
+    </div>
+    <div class="meta-col meta-center-col">
+        <span class="meta-label">Project name</span>
+        <span class="meta-value">EVOLU-A PROTOCOL</span>
+    </div>
+    <div class="meta-col meta-right-col">
+        <span class="meta-label">Year</span>
+        <span class="meta-value">2025</span>
+    </div>
+</div>
+
+<!-- ─── HUD FRAME ──────────────────────────────────────────────── -->
+<div class="hud-frame">
+
+    <!-- TABS -->
+    <div class="hud-tabs">
+        <button class="hud-tab active" data-tab="mission">MISSION</button>
+        <button class="hud-tab" data-tab="agents">AGENTS</button>
+        <button class="hud-tab" data-tab="protocol">PROTOCOL</button>
+    </div>
+
+    <!-- PLANET TITLE -->
+    <div class="hud-title-bar">
+        <div class="title-line"></div>
+        <div class="title-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+                <circle cx="12" cy="12" r="3" fill="currentColor"/>
+            </svg>
+        </div>
+        <h1 class="world-name">EVOLU<span class="world-accent">-A</span></h1>
+        <div class="title-line"></div>
+    </div>
+    <p class="world-sub">Solar System: <span>Sepolia Network</span></p>
+
+    <!-- MAIN 3-COLUMN LAYOUT -->
+    <div class="hud-main">
+
+        <!-- ─── LEFT PANEL: MISSION ─────────────────────────────── -->
+        <div class="hud-left tab-panel" id="tab-mission">
+            <div class="panel-header">MISSION <div class="header-dash"></div></div>
+
+            <div class="mission-image-wrap">
+                <img src="assets/site_bg.png" alt="Evolu-A World" class="mission-img">
+                <div class="mission-img-overlay">
+                    <span class="mission-img-name">EVOLU-A</span>
+                </div>
+            </div>
+
+            <div class="mission-brief">
+                <div class="brief-header">BRIEF</div>
+                <div class="brief-dots">
+                    <span class="dot"></span><span class="dot"></span>
+                </div>
+                <p class="brief-text">
+                    Deploy autonomous AI agents to survey and collect resources across a 20×20 grid world, make on-chain micro-payments, and evolve through four stages.
+                </p>
+            </div>
+
+            <div class="mission-sep"></div>
+
+            <div class="objective primary">
+                <div class="obj-icon">
+                    <svg width="14" height="14" viewBox="0 0 16 16"><polygon points="8,1 15,5 15,11 8,15 1,11 1,5" fill="#ffd044" stroke="#ffd044" stroke-width="0.5"/></svg>
+                </div>
+                <div class="obj-body">
+                    <h4 class="obj-title">PRIMARY:</h4>
+                    <p>Configure AI agents with OWS wallet identities. Assign OpenRouter API key to enable LLM decision engine for autonomous agent behavior.</p>
+                </div>
+            </div>
+
+            <div class="objective secondary">
+                <div class="obj-icon">
+                    <svg width="14" height="14" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5" fill="none" stroke="#4bd77d" stroke-width="1.5"/><circle cx="8" cy="8" r="2" fill="#4bd77d"/><line x1="8" y1="1" x2="8" y2="4" stroke="#4bd77d" stroke-width="1.5"/><line x1="8" y1="12" x2="8" y2="15" stroke="#4bd77d" stroke-width="1.5"/><line x1="1" y1="8" x2="4" y2="8" stroke="#4bd77d" stroke-width="1.5"/><line x1="12" y1="8" x2="15" y2="8" stroke="#4bd77d" stroke-width="1.5"/></svg>
+                </div>
+                <div class="obj-body">
+                    <h4 class="obj-title">SECONDARY:</h4>
+                    <p>Observe agents collecting resources and making x402 micro-payments on Sepolia EVM. Monitor wallet balances and on-chain transactions in real time.</p>
+                </div>
+            </div>
+
+            <div class="objective optional">
+                <div class="obj-icon">
+                    <svg width="14" height="14" viewBox="0 0 16 16"><rect x="3" y="3" width="10" height="10" rx="2" fill="none" stroke="#8888cc" stroke-width="1.5"/><rect x="6" y="6" width="4" height="4" fill="#8888cc"/></svg>
+                </div>
+                <div class="obj-body">
+                    <h4 class="obj-title">OPTIONAL:</h4>
+                    <p>Watch agents evolve across four stages: Toplayıcı → Tüccar → Üretici → Efsane, each unlocking new capabilities and strategic advantages.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ─── LEFT PANEL: AGENTS ──────────────────────────────── -->
+        <div class="hud-left tab-panel hidden" id="tab-agents">
+            <div class="panel-header">AGENTS <div class="header-dash"></div></div>
+
+            <p class="panel-desc">Configure autonomous AI agents. Each agent receives an OWS wallet identity and starts with 0.01 ETH budget on Sepolia.</p>
+
+            <div class="agent-config-list" id="agentConfigList">
+                <div class="agent-config-row">
+                    <div class="agent-config-icon" style="--stage-col:#00e5c8">A1</div>
+                    <input type="text" class="agent-name-input" value="evo" placeholder="Agent name" maxlength="12">
+                    <span class="agent-config-wallet">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M21 18v1a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v1M14 12H23M14 9l3 3-3 3"/></svg>
+                        OWS
+                    </span>
+                </div>
+                <div class="agent-config-row">
+                    <div class="agent-config-icon" style="--stage-col:#5a8cff">A2</div>
+                    <input type="text" class="agent-name-input" value="Ajan 2" placeholder="Agent name" maxlength="12">
+                    <span class="agent-config-wallet">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M21 18v1a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v1M14 12H23M14 9l3 3-3 3"/></svg>
+                        OWS
+                    </span>
+                </div>
+                <div class="agent-config-row">
+                    <div class="agent-config-icon" style="--stage-col:#ffb800">A3</div>
+                    <input type="text" class="agent-name-input" value="Ajan 3" placeholder="Agent name" maxlength="12">
+                    <span class="agent-config-wallet">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M21 18v1a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v1M14 12H23M14 9l3 3-3 3"/></svg>
+                        OWS
+                    </span>
+                </div>
+            </div>
+
+            <div class="agent-status-bar">
+                <div class="status-dot active"></div>
+                <span>3 agents ready — OWS wallets will be created on launch</span>
+            </div>
+
+            <div class="panel-sub-header" style="margin-top:20px">API CONFIGURATION</div>
+            <div class="hud-input-group">
+                <label>OpenRouter API Key</label>
+                <div class="hud-input-wrap">
+                    <input type="password" id="api-key-input" placeholder="sk-or-v1-..." autocomplete="off" spellcheck="false">
+                    <button class="hud-input-eye" id="toggleKey">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="hud-input-group">
+                <label>LLM Model</label>
+                <select id="model-select" class="hud-select">
+                    <option value="meta-llama/llama-3.2-3b-instruct:free">Llama 3.2 3B (Free)</option>
+                    <option value="mistralai/mistral-7b-instruct:free">Mistral 7B (Free)</option>
+                    <option value="google/gemma-2-9b-it:free">Gemma 2 9B (Free)</option>
+                    <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+                    <option value="anthropic/claude-3-haiku">Claude 3 Haiku</option>
+                </select>
+            </div>
+            <div class="agent-status-bar" id="api-status">
+                <div class="status-dot dim"></div>
+                <span>Not configured — fallback mode active</span>
+            </div>
+        </div>
+
+        <!-- ─── LEFT PANEL: PROTOCOL ────────────────────────────── -->
+        <div class="hud-left tab-panel hidden" id="tab-protocol">
+            <div class="panel-header">PROTOCOL <div class="header-dash"></div></div>
+
+            <p class="panel-desc">Simulation world parameters and x402 payment protocol configuration for the Sepolia EVM network.</p>
+
+            <div class="param-table">
+                <div class="param-row">
+                    <span class="param-key">GRID SIZE</span>
+                    <span class="param-val mono">20 × 20</span>
+                </div>
+                <div class="param-row">
+                    <span class="param-key">RESOURCES</span>
+                    <span class="param-val mono">50 nodes</span>
+                </div>
+                <div class="param-row">
+                    <span class="param-key">MOVE COST</span>
+                    <span class="param-val mono accent">0.0001 ETH</span>
+                </div>
+                <div class="param-row">
+                    <span class="param-key">EVOLUTION COST</span>
+                    <span class="param-val mono gold">0.001 ETH</span>
+                </div>
+                <div class="param-row">
+                    <span class="param-key">START BUDGET</span>
+                    <span class="param-val mono">0.01 ETH / agent</span>
+                </div>
+                <div class="param-row">
+                    <span class="param-key">NETWORK</span>
+                    <span class="param-val mono accent">Sepolia (chain 11155111)</span>
+                </div>
+                <div class="param-row">
+                    <span class="param-key">PROTOCOL</span>
+                    <span class="param-val mono gold">x402 HTTP 402</span>
+                </div>
+                <div class="param-row">
+                    <span class="param-key">WALLET STD</span>
+                    <span class="param-val mono">Open Wallet Standard</span>
+                </div>
+            </div>
+
+            <div class="param-sep"></div>
+
+            <div class="panel-sub-header">EVOLUTION STAGES</div>
+            <div class="stage-list">
+                <div class="stage-row"><span class="stage-num">I</span><span class="stage-name">Toplayıcı</span><span class="stage-desc">Collector</span></div>
+                <div class="stage-row"><span class="stage-num">II</span><span class="stage-name">Tüccar</span><span class="stage-desc">Merchant</span></div>
+                <div class="stage-row"><span class="stage-num">III</span><span class="stage-name">Üretici</span><span class="stage-desc">Producer</span></div>
+                <div class="stage-row"><span class="stage-num">IV</span><span class="stage-name">Efsane</span><span class="stage-desc">Legend</span></div>
+            </div>
+        </div>
+
+        <!-- ─── CENTER: WORLD VIEW ──────────────────────────────── -->
+        <div class="hud-center">
+            <div class="planet-wrap">
+                <!-- Planet sphere -->
+                <div class="planet-sphere">
+                    <!-- Orbit rings -->
+                    <div class="orbit orbit-1"></div>
+                    <div class="orbit orbit-2"></div>
+                    <!-- Planet body -->
+                    <div class="planet-body">
+                        <!-- Mini grid repurposed as planet surface map -->
+                        <div class="preview-grid" id="miniGrid"></div>
+                    </div>
+                    <!-- Coordinate markers -->
+                    <div class="coord-marker" style="top:22%;left:36%">
+                        <div class="coord-dot amber"></div>
+                        <span class="coord-label">45.2° N, 88.4° W</span>
+                    </div>
+                    <div class="coord-marker" style="top:38%;left:68%">
+                        <div class="coord-dot white"></div>
+                        <span class="coord-label">45.2° N, 88.4° W</span>
+                    </div>
+                    <div class="coord-marker" style="top:55%;left:30%">
+                        <div class="coord-dot white"></div>
+                        <span class="coord-label">45.2° N, 88.4° W</span>
+                    </div>
+                    <div class="coord-marker" style="top:66%;left:60%">
+                        <div class="coord-dot white"></div>
+                        <span class="coord-label">45.2° N, 88.4° W</span>
+                    </div>
+                    <div class="coord-marker" style="top:78%;left:44%">
+                        <div class="coord-dot white"></div>
+                        <span class="coord-label">45.2° N, 88.4° W</span>
+                    </div>
+                    <!-- Active diamond marker -->
+                    <div class="diamond-marker" style="top:35%;left:34%">
+                        <svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,0 14,7 7,14 0,7" fill="#ffd044"/></svg>
+                        <span class="diamond-label">45.2° N, 88.4° W</span>
+                    </div>
+                    <!-- Edge markers -->
+                    <div class="edge-marker left" style="top:50%">
+                        <svg width="10" height="16" viewBox="0 0 10 16"><polygon points="0,8 10,0 10,16" fill="#ffd044"/></svg>
+                    </div>
+                    <div class="edge-marker right" style="top:42%">
+                        <svg width="10" height="16" viewBox="0 0 10 16"><polygon points="10,8 0,0 0,16" fill="#ffd044"/></svg>
+                    </div>
+                    <div class="edge-marker top" style="left:50%">
+                        <svg width="16" height="10" viewBox="0 0 16 10"><polygon points="8,0 16,10 0,10" fill="#ffd044"/></svg>
+                    </div>
+                    <div class="edge-marker bottom" style="left:42%">
+                        <svg width="16" height="10" viewBox="0 0 16 10"><polygon points="8,10 0,0 16,0" fill="#ffd044"/></svg>
+                    </div>
+                    <!-- Dashed orbit path -->
+                    <svg class="orbit-svg" viewBox="0 0 400 400" fill="none">
+                        <ellipse cx="200" cy="200" rx="185" ry="185" stroke="rgba(255,255,255,0.12)" stroke-width="1" stroke-dasharray="6 4"/>
+                        <ellipse cx="200" cy="200" rx="185" ry="80" stroke="rgba(255,50,50,0.5)" stroke-width="1.5" transform="rotate(-20,200,200)"/>
+                    </svg>
+                </div>
+                <!-- Agent preview below planet -->
+                <div class="preview-agents" id="previewAgents"></div>
+            </div>
+        </div>
+
+        <!-- ─── RIGHT: STATUS PANELS ────────────────────────────── -->
+        <div class="hud-right">
+
+            <!-- DEPLOYMENT -->
+            <div class="rpanel" id="card-api">
+                <div class="rpanel-header">
+                    <div class="rpanel-dots"><span></span><span></span></div>
+                    DEPLOYMENT
+                    <div class="rpanel-stripe"></div>
+                </div>
+                <div class="deploy-coord">45.2° N, 88.4° W</div>
+                <div class="deploy-map">
+                    <div class="deploy-map-inner">
+                        <div class="deploy-marker red" style="left:20%;top:60%"></div>
+                        <div class="deploy-marker green" style="left:50%;top:35%"></div>
+                        <div class="deploy-marker red" style="left:80%;top:55%"></div>
+                    </div>
+                </div>
+                <div class="rpanel-create-wallet-btn" id="btnCreateWallet">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="7" width="20" height="14" rx="2"/>
+                        <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+                        <line x1="12" y1="12" x2="12" y2="16"/>
+                        <line x1="10" y1="14" x2="14" y2="14"/>
+                    </svg>
+                    Create OWS Wallet
+                </div>
+            </div>
+
+            <!-- EVOLUTION PROGRESS -->
+            <div class="rpanel">
+                <div class="rpanel-header">
+                    <div class="rpanel-dots"><span></span><span></span></div>
+                    EXPLORATION PROGRESS
+                    <div class="rpanel-stripe"></div>
+                </div>
+                <div class="progress-wrap">
+                    <div class="progress-track">
+                        <div class="progress-fill" style="width:28%"></div>
+                        <div class="progress-tick" style="left:28%"></div>
+                    </div>
+                </div>
+                <div class="progress-info">
+                    <span class="progress-pct">28.257%</span>
+                    <div class="progress-sub">
+                        <span id="backendText">Connecting to backend...</span>
+                        <span class="progress-mission" id="backendStatus">Mission 12 / 18</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WARNING -->
+            <div class="rpanel rpanel-warning">
+                <div class="rpanel-header warning">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="#ff4b55"><path d="M12 2L1 21h22L12 2z"/><path d="M12 9v6M12 17v2" stroke="#0a0e1a" stroke-width="2"/></svg>
+                    WARNING
+                    <span class="warn-code">Caution_Sk1</span>
+                </div>
+                <p class="warn-body">
+                    <strong>Network:</strong> Sepolia testnet detected. Real ETH transactions will be executed. Ensure agents have sufficient balance. Approach with caution.
+                </p>
+                <div class="rpanel-status" id="world-status">
+                    <div class="status-dot dim" id="backendDot"></div>
+                    <span>Backend offline — run: node server.js</span>
+                </div>
+            </div>
+
+            <!-- AGENT EVOLUTION LEVEL -->
+            <div class="rpanel">
+                <div class="rpanel-label-row">
+                    AGENT EVOLUTION: <span class="level-badge">STAGE 1</span>
+                </div>
+                <div class="level-bars">
+                    <div class="level-bar red full"></div>
+                    <div class="level-bar red full"></div>
+                    <div class="level-bar red partial"></div>
+                    <div class="level-bar red empty"></div>
+                </div>
+                <div class="critic-badge">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="#ff4b55"><path d="M12 2L1 21h22L12 2z"/></svg>
+                    ACTIVE
+                </div>
+            </div>
+
+        </div>
+    </div><!-- /hud-main -->
+
+    <!-- ─── BOTTOM BAR ─────────────────────────────────────────── -->
+    <div class="hud-bottom">
+        <div class="bottom-back" onclick="history.back()">
+            <span class="key-badge">ESC</span>
+            <span>BACK</span>
+        </div>
+
+        <button class="btn-launch-hud" id="btn-launch">
+            <span class="btn-launch-text">START MISSION</span>
+            <div class="btn-launch-shine"></div>
+        </button>
+
+        <div class="bottom-select">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+            </svg>
+            SELECT
+        </div>
+    </div>
+
+</div><!-- /hud-frame -->
+
+
+<!-- ─── OWS WALLET MODAL ────────────────────────────────────────── -->
+<div class="ows-modal-overlay hidden" id="owsModalOverlay">
+    <div class="ows-modal">
+        <div class="ows-modal-header">
+            <div class="ows-modal-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="2" y="7" width="20" height="14" rx="2"/>
+                    <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+                    <circle cx="12" cy="14" r="2"/>
+                </svg>
+            </div>
+            <div>
+                <h3 class="ows-modal-title">Create OWS Wallet</h3>
+                <p class="ows-modal-sub">Open Wallet Standard — Sepolia EVM</p>
+            </div>
+            <button class="ows-modal-close" id="owsModalClose">×</button>
+        </div>
+
+        <div id="owsStep1">
+            <p class="ows-modal-desc">
+                Her cüzdan benzersiz bir <strong>Sepolia EVM</strong> adresi ile oluşturulur ve
+                OWS standardına uygun olarak kaydedilir. Cüzdanınıza bir isim verin:
+            </p>
+            <div class="ows-code-block">
+                <span class="ows-code-prompt">$</span>
+                <span class="ows-code-cmd">ows wallet create --name </span>
+                <span class="ows-code-arg" id="owsCodePreview">my-agent</span>
+            </div>
+            <div class="input-group" style="margin-top:20px">
+                <label for="owsWalletName">Wallet Name</label>
+                <input type="text" id="owsWalletName" placeholder="my-agent" maxlength="24" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="ows-modal-actions">
+                <button class="btn-ows-cancel" id="owsBtnCancel">Cancel</button>
+                <button class="btn-ows-create" id="owsBtnCreate">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Create Wallet
+                </button>
+            </div>
+        </div>
+
+        <div id="owsStep2" class="hidden">
+            <div class="ows-creating">
+                <div class="ows-spinner"></div>
+                <p>OWS cüzdanı oluşturuluyor...</p>
+                <p class="ows-creating-sub">Sepolia EVM adresi üretiliyor...</p>
+            </div>
+        </div>
+
+        <div id="owsStep3" class="hidden">
+            <div class="ows-result">
+                <div class="ows-result-icon">✓</div>
+                <h4 class="ows-result-title">Cüzdan Oluşturuldu!</h4>
+                <div class="ows-result-row">
+                    <span class="ows-result-label">Name</span>
+                    <span class="ows-result-value" id="owsResultName">—</span>
+                </div>
+                <div class="ows-result-row">
+                    <span class="ows-result-label">EVM Address</span>
+                    <span class="ows-result-value mono" id="owsResultAddress" style="font-size:10px;word-break:break-all">—</span>
+                </div>
+                <div class="ows-result-row">
+                    <span class="ows-result-label">Network</span>
+                    <span class="ows-result-value" style="color:#00e5c8" id="owsResultNetwork">Sepolia (chain 11155111)</span>
+                </div>
+                <div class="ows-result-row">
+                    <span class="ows-result-label">Standard</span>
+                    <span class="ows-result-value">Open Wallet Standard (OWS)</span>
+                </div>
+                <a class="btn-ows-explorer" id="owsExplorerLink" href="#" target="_blank">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    Etherscan'da Gör ↗
+                </a>
+                <button class="btn-ows-create" style="width:100%;margin-top:10px" id="owsBtnDone">Kapat</button>
+            </div>
+        </div>
+
+        <div id="owsStep4" class="hidden">
+            <div class="ows-error">
+                <div class="ows-error-icon">⚠</div>
+                <p class="ows-error-msg" id="owsErrorMsg">Bir hata oluştu.</p>
+                <button class="btn-ows-create" style="width:100%" id="owsBtnRetry">Tekrar Dene</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Tab switching
+document.querySelectorAll('.hud-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.hud-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+        tab.classList.add('active');
+        const target = document.getElementById('tab-' + tab.dataset.tab);
+        if (target) target.classList.remove('hidden');
+    });
+});
+</script>
+<script src="landing.js"></script>
+</body>
+</html>
