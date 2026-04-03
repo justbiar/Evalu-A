@@ -42,7 +42,7 @@ const CONFIG = {
     movementCostETH:    '0.00001',   // ETH per step
     evolutionCostETH:   '0.0005',    // ETH per evolution
     startingBudgetETH:  '0.003',     // ETH per agent (4 agents = 0.012 ETH total)
-    agentCount:         4,           // total agent count
+    agentCount:         2,           // lowered to avoid rate limits
     gridW: 20, gridH: 20,
     resourceCount: 80,
     maxLogLines: 80,
@@ -638,7 +638,8 @@ class GameEngine {
 
         if (agent.alive) {
             agent.isThinking = true;
-            await new Promise(r => setTimeout(r, 300));
+            // Free APIs require spacing to avoid HTTP 429
+            await new Promise(r => setTimeout(r, 1000));
 
             const decision = await agent.getLLMDecision(this.agents, this.apiKey);
             agent.isThinking = false;
@@ -647,7 +648,8 @@ class GameEngine {
             sysLogger.log(logMsg, color);
         }
 
-        await new Promise(r => setTimeout(r, 800));
+        // Wait before next agent to reduce requests/minute
+        await new Promise(r => setTimeout(r, 3000));
         this.turnIdx = (this.turnIdx + 1) % this.agents.length;
 
         if (!this.agents.some(a => a.alive)) {
