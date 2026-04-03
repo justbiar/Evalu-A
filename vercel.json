@@ -1,12 +1,23 @@
 {
   "version": 2,
   "builds": [
+    { "src": "api/index.js", "use": "@vercel/node" },
     { "src": "index.html", "use": "@vercel/static" },
     { "src": "game.html", "use": "@vercel/static" },
     { "src": "landing.css", "use": "@vercel/static" },
-    { "src": "index.css", "use": "@vercel/static" },
     { "src": "game.css", "use": "@vercel/static" },
+    { "src": "index.css", "use": "@vercel/static" },
     { "src": "landing.js", "use": "@vercel/static" },
     { "src": "app.js", "use": "@vercel/static" }
+  ],
+  "routes": [
+    { "src": "/action", "dest": "/api/index" },
+    { "src": "/start", "dest": "/api/index" },
+    { "src": "/state", "dest": "/api/index" },
+    { "src": "/reset", "dest": "/api/index" },
+    { "src": "/setkey", "dest": "/api/index" },
+    { "src": "/wallet/create", "dest": "/api/index" },
+    { "src": "/explorer/(.*)", "dest": "/api/index" },
+    { "handle": "filesystem" }
   ]
 }
