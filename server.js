@@ -721,7 +721,7 @@ const engine = new GameEngine();
 // ── x402 Payment Gate (/action) ───────────────────────────────────────────────
 // External tools can use this endpoint to make payments via the x402 protocol.
 // The game engine calls internal functions directly.
-app.post('/action', (req, res) => {
+app.post('/api/action', (req, res) => {
     const paymentHeader = req.headers['x-payment'];
 
     if (!paymentHeader) {
@@ -772,19 +772,19 @@ app.post('/action', (req, res) => {
     }
 });
 
-app.post('/start', async (req, res) => {
+app.post('/api/start', async (req, res) => {
     const { apiKey, model, agentNames } = req.body;
     if (model) CONFIG.model = model;
     engine.start(apiKey, agentNames); // async, non-blocking
     res.json({ status: "starting", model: CONFIG.model, network: 'sepolia', chainId: CHAIN_ID });
 });
 
-app.get('/state', (_req, res) => {
+app.get('/api/state', (_req, res) => {
     res.json(engine.getState());
 });
 
 // ── Set API key at any time (switch from fallback → LLM mode) ────────────────
-app.post('/setkey', (req, res) => {
+app.post('/api/setkey', (req, res) => {
     const { apiKey } = req.body || {};
     if (!apiKey || apiKey.trim().length < 5) {
         return res.status(400).json({ error: 'Invalid API key' });
@@ -794,7 +794,7 @@ app.post('/setkey', (req, res) => {
     res.json({ ok: true });
 });
 
-app.post('/reset', async (req, res) => {
+app.post('/api/reset', async (req, res) => {
     const { apiKey } = req.body || {};
     if (apiKey) engine.apiKey = apiKey;
     
@@ -822,15 +822,15 @@ app.post('/reset', async (req, res) => {
 });
 
 // Etherscan redirect helpers
-app.get('/explorer/tx/:hash', (req, res) => {
+app.get('/api/explorer/tx/:hash', (req, res) => {
     res.redirect(`${ETHERSCAN_BASE}/tx/${req.params.hash}`);
 });
-app.get('/explorer/address/:address', (req, res) => {
+app.get('/api/explorer/address/:address', (req, res) => {
     res.redirect(`${ETHERSCAN_BASE}/address/${req.params.address}`);
 });
 
 // ── OWS Wallet Creation — EVM ─────────────────────────────────────────────────
-app.post('/wallet/create', (req, res) => {
+app.post('/api/wallet/create', (req, res) => {
     const { name } = req.body;
     if (!name || name.trim().length < 1) {
         return res.status(400).json({ error: 'Wallet name is required' });
@@ -863,7 +863,7 @@ if (!process.env.VERCEL) {
         console.log(`Evolu-A Backend  → Port: ${PORT}`);
         console.log(`Network          → Sepolia (chain ${CHAIN_ID})`);
         console.log(`RPC              → ${SEPOLIA_RPC}`);
-        console.log(`x402 Action Gate → http://localhost:${PORT}/action`);
+        console.log(`x402 Action Gate → http://localhost:${PORT}/api/action`);
     });
 }
 

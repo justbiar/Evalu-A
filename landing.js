@@ -4,7 +4,7 @@
  */
 
 // Use relative API path so it works seamlessly on Render
-const API_URL       = "";
+const API_URL       = "/api";
 const ETHERSCAN_BASE = "https://sepolia.etherscan.io";
 
 // ─── BG CANVAS ───────────────────────────────────────────────────────────────
@@ -112,7 +112,7 @@ for (let i = 0; i < 20; i++) {
     mockResources.push({
         x: Math.floor(Math.random() * COLS),
         y: Math.floor(Math.random() * ROWS),
-        kind: ['resource-odun', 'resource-tas', 'resource-yiyecek'][Math.floor(Math.random() * 3)]
+        kind: ['resource-wood', 'resource-stone', 'resource-food', 'resource-gold'][Math.floor(Math.random() * 4)]
     });
 }
 
@@ -162,8 +162,8 @@ setInterval(moveMockAgents, 800);
 
 // Preview agents panel
 const previewAgents = document.getElementById('previewAgents');
-const STAGE_NAMES = ['Toplayıcı', 'Tüccar', 'Üretici', 'Efsane'];
-const agentNames = ['evo', 'Ajan 2', 'Ajan 3'];
+const STAGE_NAMES = ['Collector', 'Merchant', 'Producer', 'Legend'];
+const agentNames = ['evo', 'Agent 2', 'Agent 3'];
 const agentCols = ['#00e5c8', '#5a8cff', '#ffb800'];
 
 agentNames.forEach((name, i) => {
@@ -332,13 +332,13 @@ owsBtnCreate?.addEventListener('click', async () => {
         const explorerLink = document.getElementById('owsExplorerLink');
         if (explorerLink) {
             explorerLink.href = data.explorerUrl || `${ETHERSCAN_BASE}/address/${data.address}`;
-            explorerLink.textContent = 'Etherscan\'da Gör ↗';
+            explorerLink.textContent = 'View on Etherscan ↗';
         }
 
         showOwsStep('owsStep3');
     } catch (err) {
         const errMsg = document.getElementById('owsErrorMsg');
-        if (errMsg) errMsg.textContent = err.message || 'Bağlantı hatası. Backend çalışıyor mu?';
+        if (errMsg) errMsg.textContent = err.message || 'Connection error. Is the backend running?';
         showOwsStep('owsStep4');
     }
 });

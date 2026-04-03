@@ -27,7 +27,7 @@ const RESOURCES = {
 };
 
 // Use relative API path so it works seamlessly on Render/Vercel
-const API_URL = "";
+const API_URL = "/api";
 
 // ─── Chat Bubble Sprite ──────────────────────────────────────────────────────
 const chatBubbleImg = new Image();

@@ -1,12 +1,9 @@
 {
   "version": 2,
+  "framework": null,
+  "buildCommand": null,
+  "outputDirectory": ".",
   "rewrites": [
-    { "source": "/state",         "destination": "/api/index" },
-    { "source": "/start",         "destination": "/api/index" },
-    { "source": "/action",        "destination": "/api/index" },
-    { "source": "/reset",         "destination": "/api/index" },
-    { "source": "/setkey",        "destination": "/api/index" },
-    { "source": "/wallet/create", "destination": "/api/index" },
-    { "source": "/explorer/:path*","destination": "/api/index" }
+    { "source": "/api/(.*)", "destination": "/api" }
   ]
 }

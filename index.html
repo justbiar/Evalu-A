@@ -109,7 +109,7 @@
                 </div>
                 <div class="obj-body">
                     <h4 class="obj-title">OPTIONAL:</h4>
-                    <p>Watch agents evolve across four stages: Toplayıcı → Tüccar → Üretici → Efsane, each unlocking new capabilities and strategic advantages.</p>
+                    <p>Watch agents evolve across four stages: Collector → Merchant → Producer → Legend, each unlocking new capabilities and strategic advantages.</p>
                 </div>
             </div>
         </div>
@@ -131,7 +131,7 @@
                 </div>
                 <div class="agent-config-row">
                     <div class="agent-config-icon" style="--stage-col:#5a8cff">A2</div>
-                    <input type="text" class="agent-name-input" value="Ajan 2" placeholder="Agent name" maxlength="12">
+                    <input type="text" class="agent-name-input" value="Agent 2" placeholder="Agent name" maxlength="12">
                     <span class="agent-config-wallet">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M21 18v1a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v1M14 12H23M14 9l3 3-3 3"/></svg>
                         OWS
@@ -139,7 +139,7 @@
                 </div>
                 <div class="agent-config-row">
                     <div class="agent-config-icon" style="--stage-col:#ffb800">A3</div>
-                    <input type="text" class="agent-name-input" value="Ajan 3" placeholder="Agent name" maxlength="12">
+                    <input type="text" class="agent-name-input" value="Agent 3" placeholder="Agent name" maxlength="12">
                     <span class="agent-config-wallet">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M21 18v1a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v1M14 12H23M14 9l3 3-3 3"/></svg>
                         OWS
@@ -225,10 +225,10 @@
 
             <div class="panel-sub-header">EVOLUTION STAGES</div>
             <div class="stage-list">
-                <div class="stage-row"><span class="stage-num">I</span><span class="stage-name">Toplayıcı</span><span class="stage-desc">Collector</span></div>
-                <div class="stage-row"><span class="stage-num">II</span><span class="stage-name">Tüccar</span><span class="stage-desc">Merchant</span></div>
-                <div class="stage-row"><span class="stage-num">III</span><span class="stage-name">Üretici</span><span class="stage-desc">Producer</span></div>
-                <div class="stage-row"><span class="stage-num">IV</span><span class="stage-name">Efsane</span><span class="stage-desc">Legend</span></div>
+                <div class="stage-row"><span class="stage-num">I</span><span class="stage-name">Collector</span><span class="stage-desc">Gatherer</span></div>
+                <div class="stage-row"><span class="stage-num">II</span><span class="stage-name">Merchant</span><span class="stage-desc">Trader</span></div>
+                <div class="stage-row"><span class="stage-num">III</span><span class="stage-name">Producer</span><span class="stage-desc">Builder</span></div>
+                <div class="stage-row"><span class="stage-num">IV</span><span class="stage-name">Legend</span><span class="stage-desc">Apex</span></div>
             </div>
         </div>
 
@@ -426,8 +426,8 @@
 
         <div id="owsStep1">
             <p class="ows-modal-desc">
-                Her cüzdan benzersiz bir <strong>Sepolia EVM</strong> adresi ile oluşturulur ve
-                OWS standardına uygun olarak kaydedilir. Cüzdanınıza bir isim verin:
+                Each wallet is created with a unique <strong>Sepolia EVM</strong> address and
+                registered according to the OWS standard. Give your wallet a name:
             </p>
             <div class="ows-code-block">
                 <span class="ows-code-prompt">$</span>
@@ -450,15 +450,15 @@
         <div id="owsStep2" class="hidden">
             <div class="ows-creating">
                 <div class="ows-spinner"></div>
-                <p>OWS cüzdanı oluşturuluyor...</p>
-                <p class="ows-creating-sub">Sepolia EVM adresi üretiliyor...</p>
+                <p>Creating OWS wallet...</p>
+                <p class="ows-creating-sub">Generating Sepolia EVM address...</p>
             </div>
         </div>
 
         <div id="owsStep3" class="hidden">
             <div class="ows-result">
                 <div class="ows-result-icon">✓</div>
-                <h4 class="ows-result-title">Cüzdan Oluşturuldu!</h4>
+                <h4 class="ows-result-title">Wallet Created!</h4>
                 <div class="ows-result-row">
                     <span class="ows-result-label">Name</span>
                     <span class="ows-result-value" id="owsResultName">—</span>
@@ -477,17 +477,17 @@
                 </div>
                 <a class="btn-ows-explorer" id="owsExplorerLink" href="#" target="_blank">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                    Etherscan'da Gör ↗
+                    View on Etherscan ↗
                 </a>
-                <button class="btn-ows-create" style="width:100%;margin-top:10px" id="owsBtnDone">Kapat</button>
+                <button class="btn-ows-create" style="width:100%;margin-top:10px" id="owsBtnDone">Close</button>
             </div>
         </div>
 
         <div id="owsStep4" class="hidden">
             <div class="ows-error">
                 <div class="ows-error-icon">⚠</div>
-                <p class="ows-error-msg" id="owsErrorMsg">Bir hata oluştu.</p>
-                <button class="btn-ows-create" style="width:100%" id="owsBtnRetry">Tekrar Dene</button>
+                <p class="ows-error-msg" id="owsErrorMsg">An error occurred.</p>
+                <button class="btn-ows-create" style="width:100%" id="owsBtnRetry">Try Again</button>
             </div>
         </div>
     </div>
