@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "build": "mkdir -p public && cp *.html *.css landing.js app.js public/ 2>/dev/null; test -d assets && cp -r assets public/ 2>/dev/null; exit 0"
   },
   "keywords": [
     "x402",

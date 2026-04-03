@@ -1,6 +1,5 @@
 server.js
-package.json
-package-lock.json
+test_ows.js
 node_modules/
 .env
 .env.*
