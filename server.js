@@ -359,10 +359,12 @@ Rules:
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             let raw = data.choices[0].message.content.trim();
-            if (raw.includes("```")) raw = raw.replace(/```(json)?/g, '').trim();
-            return JSON.parse(raw);
+            const jsonMatch = raw.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) throw new Error("No JSON found in response");
+            return JSON.parse(jsonMatch[0]);
         } catch (err) {
-            return this._fallbackAction(err.message.substring(0, 30));
+            console.error(`[LLM ERROR for ${this.name}]:`, err.message || err);
+            return this._fallbackAction(err.message.substring(0, 30) || "LLM Error");
         }
     }
 
@@ -393,7 +395,7 @@ Rules:
         const target     = action.target || "";
         const isFallback = !!action._fallback;
         this.isFallback  = isFallback;
-        const prefix     = isFallback ? "🤖[FB] " : "";
+        const prefix     = isFallback ? `🤖[FB: ${action._fallback.substring(0,20)}] ` : "";
         
         if (act === "move")    return this._doMove(action.direction || "up", prefix, isFallback);
         if (act === "evolve")  return this._doEvolve(prefix, isFallback);
