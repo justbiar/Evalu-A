@@ -1,5 +1,12 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
-  "outputDirectory": "public"
+  "builds": [
+    { "src": "index.html", "use": "@vercel/static" },
+    { "src": "game.html", "use": "@vercel/static" },
+    { "src": "landing.css", "use": "@vercel/static" },
+    { "src": "index.css", "use": "@vercel/static" },
+    { "src": "game.css", "use": "@vercel/static" },
+    { "src": "landing.js", "use": "@vercel/static" },
+    { "src": "app.js", "use": "@vercel/static" }
+  ]
 }
