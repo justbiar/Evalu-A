@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/(action|start|state|reset|setkey|wallet/create|explorer/.*)",
+      "destination": "/server.js"
+    }
+  ]
+}
