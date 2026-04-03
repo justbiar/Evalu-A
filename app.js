@@ -211,7 +211,7 @@ async function fetchState() {
             const modeLabel = state.agents?.some(a => a.isFunded)
                 ? 'Sepolia Testnet — x402'
                 : 'Offline Mode — x402 simulated';
-            dom.simStatus.innerHTML = `<div class="pulse-dot"></div><span>Simulation Running — ${modeLabel}</span>`;
+            dom.simStatus.innerHTML = `<div class="pulse-dot"></div><span>${modeLabel}</span>`;
         }
 
         renderDOM();
