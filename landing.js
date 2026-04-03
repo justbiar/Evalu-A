@@ -3,7 +3,8 @@
  * Sepolia EVM + x402 payment protocol
  */
 
-const API_URL       = "http://localhost:3000";
+// Use relative API path so it works seamlessly on Render
+const API_URL       = "";
 const ETHERSCAN_BASE = "https://sepolia.etherscan.io";
 
 // ─── BG CANVAS ───────────────────────────────────────────────────────────────

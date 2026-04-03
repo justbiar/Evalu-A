@@ -26,7 +26,8 @@ const RESOURCES = {
     "yiyecek": { hex: "#4bd77d" }
 };
 
-const API_URL = "http://localhost:3000";
+// Use relative API path so it works seamlessly on Render/Vercel
+const API_URL = "";
 
 // ─── Assets ─────────────────────────────────────────────────────────────────
 const floorTiles = [];

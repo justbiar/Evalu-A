@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: evolu-a
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: USE_OFFLINE_MODE
+        value: "false"
+      - key: FAUCET_PRIVATE_KEY
+        sync: false

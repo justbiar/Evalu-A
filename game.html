@@ -6,81 +6,86 @@
     <title>Evolu-A | Simulation Running</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&family=Barlow+Condensed:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="game.css">
 </head>
 <body>
 
-    <!-- ─── TOP BAR ────────────────────────────────────────── -->
-    <div class="topbar">
-        <div class="topbar-left">
-            <a href="index.html" class="back-btn" title="Back to Home">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <!-- ─── META BAR ────────────────────────────────────── -->
+    <div class="meta-bar">
+        <div class="meta-col">
+            <a href="index.html" class="back-btn" title="Back">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
                     <path d="M19 12H5M12 19l-7-7 7-7"/>
                 </svg>
+                <span class="key-badge">ESC</span> BACK
             </a>
-            <div class="topbar-brand">
-                <span class="topbar-logo">▶ EVOLU<span>-A</span></span>
-                <span class="topbar-sub">OWS × x402 Simulation</span>
-            </div>
         </div>
-
-        <div class="topbar-center">
-            <div class="sim-info" id="simStatus">
-                <div class="pulse-dot"></div>
-                <span>Simulation Running</span>
-            </div>
+        <div class="meta-col meta-center">
+            <span class="meta-label">SIMULATION</span>
+            <span class="meta-title">EVOLU<span class="accent">-A</span> PROTOCOL</span>
         </div>
-
-        <div class="topbar-right">
+        <div class="meta-col meta-right">
             <div class="contract-badge">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                <span class="contract-label">World Contract</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                WORLD CONTRACT
                 <span class="contract-value" id="contract-balance">0.000000 ETH</span>
             </div>
-            <div class="topbar-controls">
-                <button class="ctrl-btn" id="btn-reset" title="Reset Resources (R)">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
-                    </svg>
-                    Reset
-                </button>
-            </div>
         </div>
     </div>
 
-    <!-- ─── FALLBACK BANNER ───────────────────────────────── -->
+    <!-- ─── FALLBACK BANNER ──────────────────────────────── -->
     <div class="fallback-banner hidden" id="fallbackBanner">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         <strong>FALLBACK MODE</strong> — OpenRouter API key girilmedi.
-        <input id="inlineApiKey" type="password" placeholder="sk-or-... API key gir"
-               style="margin-left:12px;padding:3px 8px;border-radius:6px;border:1px solid var(--amber);background:#1a1a2e;color:#fff;font-size:12px;width:260px;outline:none;">
-        <button id="inlineApplyKey"
-                style="margin-left:6px;padding:3px 10px;border-radius:6px;border:none;background:var(--amber);color:#000;font-weight:700;font-size:12px;cursor:pointer;">Uygula ✓</button>
+        <input id="inlineApiKey" type="password" placeholder="sk-or-... API key gir">
+        <button id="inlineApplyKey">Uygula ✓</button>
     </div>
 
-    <!-- ─── MAIN LAYOUT ────────────────────────────────────── -->
+    <!-- ─── HUD MAIN ─────────────────────────────────────── -->
     <div class="app-container">
 
-        <!-- ─── CANVAS ──────────────────────────────────────── -->
+        <!-- ─── CANVAS AREA ──────────────────────────────── -->
         <main class="canvas-wrapper">
             <canvas id="gameCanvas"></canvas>
-            <div class="canvas-overlay-controls">
-                <span class="control-key">ESC</span> Home
-                <span class="control-key">R</span> Reset Resources
+
+            <!-- Top-right: turn + status -->
+            <div class="hud-corner top-right">
+                <div class="hud-badge" id="simStatus">
+                    <div class="pulse-dot"></div>
+                    SIMULATION RUNNING
+                </div>
+                <div class="hud-badge mono" id="turnIndicator">TURN 0</div>
             </div>
-            <div class="canvas-turn-indicator" id="turnIndicator">
-                Turn 0
+
+            <!-- Bottom-left: controls -->
+            <div class="hud-corner bottom-left">
+                <span class="control-key">ESC</span> Home
+                <span style="color:rgba(100,140,180,0.3)">|</span>
+                <span class="control-key">R</span> Reset Resources
+                <button class="ctrl-btn" id="btn-reset">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+                    </svg>
+                    RESET
+                </button>
             </div>
         </main>
 
-        <!-- ─── SIDEBAR ─────────────────────────────────────── -->
+        <!-- ─── SIDEBAR ──────────────────────────────────── -->
         <aside class="sidebar">
+
+            <!-- Header stripe -->
+            <div class="sidebar-header">
+                <div class="sidebar-header-dots"><span></span><span></span></div>
+                MISSION STATUS
+                <div class="sidebar-stripe"></div>
+            </div>
 
             <!-- Tabs -->
             <div class="sidebar-tabs">
-                <button class="tab active" data-tab="agents">Agents</button>
-                <button class="tab" data-tab="log">Event Log</button>
+                <button class="tab active" data-tab="agents">AGENTS</button>
+                <button class="tab" data-tab="log">EVENT LOG</button>
             </div>
 
             <!-- Agents Tab -->

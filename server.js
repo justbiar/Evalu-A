@@ -849,9 +849,9 @@ app.post('/wallet/create', (req, res) => {
     }
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Evolu-A Backend  → http://localhost:${PORT}`);
+    console.log(`Evolu-A Backend  → Port: ${PORT}`);
     console.log(`Network          → Sepolia (chain ${CHAIN_ID})`);
     console.log(`RPC              → ${SEPOLIA_RPC}`);
     console.log(`x402 Action Gate → http://localhost:${PORT}/action`);
