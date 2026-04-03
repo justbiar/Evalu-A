@@ -12,22 +12,30 @@ const CONFIG = {
 const ETHERSCAN_BASE = 'https://sepolia.etherscan.io';
 
 const STAGES = {
-    "Toplayıcı": { hex: "#00e5c8" },
-    "Tüccar":    { hex: "#5a8cff" },
-    "Üretici":   { hex: "#ffb800" },
-    "Efsane":    { hex: "#ffc332" }
+    "Collector": { hex: "#00e5c8" },
+    "Merchant":  { hex: "#5a8cff" },
+    "Producer":  { hex: "#ffb800" },
+    "Legend":    { hex: "#ffc332" }
 };
 
-const STAGE_ORDER = ["Toplayıcı", "Tüccar", "Üretici", "Efsane"];
+const STAGE_ORDER = ["Collector", "Merchant", "Producer", "Legend"];
 
 const RESOURCES = {
-    "odun":    { hex: "#8c5a2b" },
-    "taş":     { hex: "#919194" },
-    "yiyecek": { hex: "#4bd77d" }
+    "wood":  { hex: "#8c5a2b" },
+    "stone": { hex: "#919194" },
+    "food":  { hex: "#4bd77d" }
 };
 
 // Use relative API path so it works seamlessly on Render/Vercel
 const API_URL = "";
+
+// ─── Chat Bubble Sprite ──────────────────────────────────────────────────────
+const chatBubbleImg = new Image();
+chatBubbleImg.src = 'assets/Chat BalloonsBubbles - Pixel Art/X2/Chat-Transparent.png';
+// X2 spritesheet: 1792×352px — each cell: 128×176px (14 cols × 2 rows)
+const BUBBLE_CELL_W = 128;
+const BUBBLE_CELL_H = 176;
+// We use col=0 row=0 (standard bubble with bottom-left tail)
 
 // ─── Assets ─────────────────────────────────────────────────────────────────
 const floorTiles = [];
@@ -52,28 +60,28 @@ waterTileBase.onload = () => {
 };
 
 const bgAssets = {
-    odun: new Image(),
-    taş: new Image(),
-    yiyecek: new Image(),
-    altın: new Image(),
-    elmas: new Image()
+    wood: new Image(),
+    stone: new Image(),
+    food: new Image(),
+    gold: new Image(),
+    crystal: new Image()
 };
-bgAssets.odun.src = 'assets/isometric tileset/separated images/tile_053.png';
-bgAssets.taş.src = 'assets/isometric tileset/separated images/tile_060.png';
-bgAssets.yiyecek.src = 'assets/isometric tileset/separated images/tile_048.png';
-bgAssets.altın.src = 'assets/isometric tileset/separated images/tile_044.png'; // Altın renkli kayalar
-bgAssets.elmas.src = 'assets/isometric tileset/separated images/tile_041.png'; // Mavi kristalimsi yapı
+bgAssets.wood.src    = 'assets/isometric tileset/separated images/tile_053.png';
+bgAssets.stone.src   = 'assets/isometric tileset/separated images/tile_060.png';
+bgAssets.food.src    = 'assets/isometric tileset/separated images/tile_048.png';
+bgAssets.gold.src    = 'assets/isometric tileset/separated images/tile_044.png';
+bgAssets.crystal.src = 'assets/isometric tileset/separated images/tile_041.png';
 
 const agentAnimals = {
-    "Toplayıcı": new Image(),
-    "Tüccar":    new Image(),
-    "Üretici":   new Image(),
-    "Efsane":    new Image()
+    "Collector": new Image(),
+    "Merchant":  new Image(),
+    "Producer":  new Image(),
+    "Legend":    new Image()
 };
-agentAnimals["Toplayıcı"].src = 'robot level/4.png';
-agentAnimals["Tüccar"].src    = 'robot level/3.png';
-agentAnimals["Üretici"].src   = 'robot level/2.png';
-agentAnimals["Efsane"].src    = 'robot level/1.png';
+agentAnimals["Collector"].src = 'robot level/4.png';
+agentAnimals["Merchant"].src  = 'robot level/3.png';
+agentAnimals["Producer"].src  = 'robot level/2.png';
+agentAnimals["Legend"].src    = 'robot level/1.png';
 
 const avatarImg = new Image();
 avatarImg.src = 'assets/avatar.png';
@@ -104,6 +112,13 @@ dom.canvas.height = 900;
 let state = null;
 let pollingInterval = null;
 let turnCount = 0;
+
+// Speech bubble tracking: store client-side timestamp when a new message is first seen
+const bubbleSeen = {}; // agentName → { msg, ts }
+
+// Chat log: accumulates all agent messages for the CHAT tab
+const chatHistory = []; // { name, color, msg, ts }
+const MAX_CHAT_HISTORY = 60;
 
 // Canvas panning
 let panX = 0;
@@ -189,13 +204,13 @@ async function fetchState() {
         state = newState;
 
         if (state.starting && dom.simStatus) {
-            dom.simStatus.innerHTML = `<div class="pulse-dot" style="background:#5a8cff"></div><span style="color:#5a8cff">Sepolia'dan ETH aktarılıyor...</span>`;
+            dom.simStatus.innerHTML = `<div class="pulse-dot" style="background:#5a8cff"></div><span style="color:#5a8cff">Funding agents from Sepolia...</span>`;
         } else if (state.running === false && dom.simStatus) {
             dom.simStatus.innerHTML = `<div class="pulse-dot" style="background:#ff4b55;animation:none;box-shadow:none;"></div><span style="color:#ff4b55">Simulation Ended</span>`;
         } else if (dom.simStatus) {
             const modeLabel = state.agents?.some(a => a.isFunded)
                 ? 'Sepolia Testnet — x402'
-                : 'Offline Mod — x402 simüle';
+                : 'Offline Mode — x402 simulated';
             dom.simStatus.innerHTML = `<div class="pulse-dot"></div><span>Simulation Running — ${modeLabel}</span>`;
         }
 
@@ -351,35 +366,50 @@ function renderCanvas() {
             ctx.fillStyle = '#4bd77d';
             ctx.fillRect(hpx, hpy, Math.max(0, hpWidth * (a.hp / 100)), 3);
 
-            // Chat Bubble
+            // Chat Bubble — pixel art sprite with fade
             if (a.message) {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                ctx.font = 'bold 10px Inter, sans-serif';
-                let text = a.message.length > 30 ? a.message.slice(0, 30) + '...' : a.message;
-                const textWidth = ctx.measureText(text).width;
-                const bubbleW = textWidth + 12;
-                const bubbleX = px - bubbleW/2;
-                const bubbleY = py - robH + tileH - 35; 
-                
-                ctx.beginPath();
-                if (ctx.roundRect) {
-                    ctx.roundRect(bubbleX, bubbleY, bubbleW, 18, 6);
-                } else {
-                    ctx.rect(bubbleX, bubbleY, bubbleW, 18);
+                const prev = bubbleSeen[a.name];
+                if (!prev || prev.msg !== a.message) {
+                    bubbleSeen[a.name] = { msg: a.message, ts: Date.now() };
                 }
-                ctx.fill();
-                
-                // Tail
-                ctx.beginPath();
-                ctx.moveTo(px - 4, bubbleY + 17);
-                ctx.lineTo(px, bubbleY + 23);
-                ctx.lineTo(px + 4, bubbleY + 17);
-                ctx.fill();
-                
-                ctx.fillStyle = '#080d1a';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(text, px, bubbleY + 9);
+                const age = Date.now() - bubbleSeen[a.name].ts;
+                const alpha = Math.max(0, 1 - age / 5000);
+
+                if (alpha > 0.05) {
+                    ctx.save();
+                    ctx.globalAlpha = alpha;
+
+                    const text = a.message.length > 36 ? a.message.slice(0, 36) + '…' : a.message;
+                    ctx.font = 'bold 10px "Fira Code", monospace';
+                    const textW = ctx.measureText(text).width;
+
+                    const bW = Math.max(80, textW + 22);
+                    const bH = 36;
+                    const bx = px - bW / 2;
+                    const by = py - robH + tileH - bH - 14;
+
+                    if (chatBubbleImg.complete && chatBubbleImg.naturalWidth > 0) {
+                        // Draw pixel art bubble sprite (col 0, row 0)
+                        ctx.drawImage(
+                            chatBubbleImg,
+                            0, 0, BUBBLE_CELL_W, BUBBLE_CELL_H,
+                            bx, by, bW, bH + 14
+                        );
+                    } else {
+                        ctx.fillStyle = 'rgba(240,240,255,0.92)';
+                        ctx.beginPath();
+                        if (ctx.roundRect) ctx.roundRect(bx, by, bW, bH, 6);
+                        else ctx.rect(bx, by, bW, bH);
+                        ctx.fill();
+                    }
+
+                    ctx.fillStyle = '#0d1525';
+                    ctx.font = 'bold 10px "Fira Code", monospace';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(text, px, by + bH / 2 - 2);
+                    ctx.restore();
+                }
             }
         }
     });
@@ -400,8 +430,20 @@ function renderDOM() {
         buildAgentCards();
     }
 
-    state.agents.forEach((a, i) => updateAgentCard(a, i));
+    state.agents.forEach((a, i) => {
+        updateAgentCard(a, i);
+        // Track new messages for the chat tab
+        if (a.message && a.alive) {
+            const prev = bubbleSeen[a.name];
+            if (!prev || prev.msg !== a.message) {
+                const color = STAGES[a.stage]?.hex || '#00e5c8';
+                chatHistory.unshift({ name: a.name, color, msg: a.message, ts: Date.now(), isFallback: a.isFallback });
+                if (chatHistory.length > MAX_CHAT_HISTORY) chatHistory.pop();
+            }
+        }
+    });
     renderLog();
+    renderChat();
 }
 
 function buildAgentCards() {
@@ -482,12 +524,12 @@ function updateAgentCard(a, i) {
     if (!a.alive) {
         card.classList.add('dead');
         card.classList.remove('thinking');
-        if (statusEl) { statusEl.textContent = '[ÖLDÜ]'; statusEl.style.color = 'var(--red)'; statusEl.style.animation = 'none'; }
+        if (statusEl) { statusEl.textContent = '[DEAD]'; statusEl.style.color = 'var(--red)'; statusEl.style.animation = 'none'; }
     } else {
         card.classList.remove('dead');
         if (a.isThinking) {
             card.classList.add('thinking');
-            if (statusEl) { statusEl.textContent = '◉ Düşünüyor...'; statusEl.style.color = 'var(--thinking)'; statusEl.style.animation = ''; }
+            if (statusEl) { statusEl.textContent = '◉ Thinking...'; statusEl.style.color = 'var(--thinking)'; statusEl.style.animation = ''; }
         } else {
             card.classList.remove('thinking');
             if (statusEl) { statusEl.textContent = a.lastAction || ''; statusEl.style.color = 'var(--text-dim)'; statusEl.style.animation = 'none'; }
@@ -572,6 +614,38 @@ function updateAgentCard(a, i) {
     }
 }
 
+function renderChat() {
+    const container = document.getElementById('chat-log');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (chatHistory.length === 0) {
+        const empty = document.createElement('div');
+        empty.style.cssText = 'color:#4a6a80;font-size:11px;text-align:center;padding:16px 0;';
+        empty.textContent = 'Agents haven\'t spoken yet...';
+        container.appendChild(empty);
+        return;
+    }
+
+    chatHistory.forEach(entry => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;flex-direction:column;gap:2px;';
+
+        const header = document.createElement('div');
+        header.style.cssText = `font-size:9px;color:${entry.color};font-weight:700;letter-spacing:0.05em;display:flex;align-items:center;gap:5px;`;
+        const time = new Date(entry.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        header.innerHTML = `<span style="opacity:.5">${time}</span> <span>${entry.name}</span>${entry.isFallback ? '<span style="color:#ff8c42;font-size:8px"> 🤖FB</span>' : ''}`;
+
+        const bubble = document.createElement('div');
+        bubble.style.cssText = `background:rgba(255,255,255,0.06);border:1px solid ${entry.color}33;border-radius:4px;padding:5px 8px;font-size:10px;color:#c8daea;line-height:1.4;font-family:"Fira Code",monospace;`;
+        bubble.textContent = entry.msg;
+
+        row.appendChild(header);
+        row.appendChild(bubble);
+        container.appendChild(row);
+    });
+}
+
 function renderLog() {
     if (!state || !state.logs) return;
     dom.eventLog.innerHTML = '';
@@ -580,9 +654,9 @@ function renderLog() {
 
     let entries = [...state.logs];
     if (activeFilter === 'evolve') {
-        entries = entries.filter(e => e.text.includes('EVRİMLEŞTİ') || e.text.includes('★'));
+        entries = entries.filter(e => e.text.includes('EVOLVED') || e.text.includes('★'));
     } else if (activeFilter === 'action') {
-        entries = entries.filter(e => e.text.includes('hareket') || e.text.includes('topladı'));
+        entries = entries.filter(e => e.text.includes('moved') || e.text.includes('collected'));
     }
 
     entries.forEach(entry => {
@@ -666,16 +740,16 @@ if (inlineApplyBtn && inlineKeyInput) {
                 inlineApplyBtn.style.background = '#4bd77d';
                 // Banner will auto-hide on next state poll (isFallbackMode = false)
                 setTimeout(() => {
-                    inlineApplyBtn.textContent = 'Uygula ✓';
+                    inlineApplyBtn.textContent = 'Apply ✓';
                     inlineApplyBtn.style.background = 'var(--amber)';
                 }, 2000);
             } else {
-                inlineApplyBtn.textContent = '✗ Hata';
-                setTimeout(() => { inlineApplyBtn.textContent = 'Uygula ✓'; }, 2000);
+                inlineApplyBtn.textContent = '✗ Error';
+                setTimeout(() => { inlineApplyBtn.textContent = 'Apply ✓'; }, 2000);
             }
         } catch {
-            inlineApplyBtn.textContent = '✗ Bağlantı yok';
-            setTimeout(() => { inlineApplyBtn.textContent = 'Uygula ✓'; }, 2000);
+            inlineApplyBtn.textContent = '✗ No connection';
+            setTimeout(() => { inlineApplyBtn.textContent = 'Apply ✓'; }, 2000);
         }
     };
 

@@ -9,7 +9,6 @@ import {
     http,
     parseEther,
     formatEther,
-    parseGwei,
 } from 'viem';
 import { sepolia } from 'viem/chains';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
@@ -43,14 +42,14 @@ const CONFIG = {
     movementCostETH:    '0.00001',   // ETH per step
     evolutionCostETH:   '0.0005',    // ETH per evolution
     startingBudgetETH:  '0.003',     // ETH per agent (4 agents = 0.012 ETH total)
-    agentCount:         4,           // toplam ajan sayısı
+    agentCount:         4,           // total agent count
     gridW: 20, gridH: 20,
     resourceCount: 80,
     maxLogLines: 80,
     offlineMode: process.env.USE_OFFLINE_MODE === 'true',
 };
 
-const STAGE_ORDER = ["Toplayıcı", "Tüccar", "Üretici", "Efsane"];
+const STAGE_ORDER = ["Collector", "Merchant", "Producer", "Legend"];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LOGGER
@@ -84,20 +83,20 @@ class World {
         return parseFloat(formatEther(this.contractBalanceWei));
     }
 
-    spawnResources(count) {
+    spawnResources(_count) {
         this.resources = [];
         const kinds = [
-            { id: 'odun', weight: 45 },
-            { id: 'taş', weight: 30 },
-            { id: 'yiyecek', weight: 20 },
-            { id: 'altın', weight: 4 },
-            { id: 'elmas', weight: 1 }
+            { id: 'wood',    weight: 45 },
+            { id: 'stone',   weight: 30 },
+            { id: 'food',    weight: 20 },
+            { id: 'gold',    weight: 4  },
+            { id: 'crystal', weight: 1  }
         ];
 
         for (let i = 0; i < CONFIG.resourceCount; i++) {
             let rnd = Math.random() * 100;
             let current = 0;
-            let selectedKind = 'odun';
+            let selectedKind = 'wood';
             for (let k of kinds) {
                 current += k.weight;
                 if (rnd <= current) { selectedKind = k.id; break; }
@@ -142,10 +141,10 @@ class World {
                 value: sendable,
                 gas:   21000n,
             });
-            sysLogger.log(`↩ Treasury: ${formatEther(sendable)} ETH faucet'a iade → ${hash.slice(0,14)}...`, "#5a8cff");
+            sysLogger.log(`↩ Treasury: ${formatEther(sendable)} ETH returned to faucet → ${hash.slice(0,14)}...`, "#5a8cff");
             this.contractBalanceWei = 0n;
         } catch (err) {
-            sysLogger.log(`⚠️ Treasury iade başarısız: ${err.message.slice(0, 40)}`, "#ff4b55");
+            sysLogger.log(`⚠️ Treasury refund failed: ${err.message.slice(0, 40)}`, "#ff4b55");
         }
     }
 }
@@ -173,7 +172,7 @@ class Agent {
         this.balanceWei = 0n;
         this.isFunded   = false;
 
-        this.stage      = "Toplayıcı";
+        this.stage      = "Collector";
         this.inventory  = {};
         this.alive      = true;
         this.hp         = 100;
@@ -183,10 +182,10 @@ class Agent {
 
         this.isThinking = false;
         this.isFallback = false;
-        this.lastAction = "Doğdu";
+        this.lastAction = "Spawned";
         this.lastTxHash = null;
 
-        console.log(`[Agent:${name}] EVM Adres: ${this.evmAddress}`);
+        console.log(`[Agent:${name}] EVM Address: ${this.evmAddress}`);
     }
 
     get balance() { return parseFloat(formatEther(this.balanceWei)); }
@@ -200,7 +199,7 @@ class Agent {
         if (CONFIG.offlineMode || !faucetPk) {
             this.balanceWei = parseEther(CONFIG.startingBudgetETH);
             this.isFunded   = false;
-            sysLogger.log(`💰 ${this.name}: ${CONFIG.startingBudgetETH} ETH simüle edildi (offline mod)`, "#00e5c8");
+            sysLogger.log(`💰 ${this.name}: ${CONFIG.startingBudgetETH} ETH simulated (offline mode)`, "#00e5c8");
             return false;
         }
 
@@ -210,13 +209,13 @@ class Agent {
             const faucetBal     = await publicClient.getBalance({ address: faucetAccount.address });
             const needed        = parseEther(CONFIG.startingBudgetETH);
             if (faucetBal < needed) {
-                sysLogger.log(`⚠️ ${this.name}: Faucet bakiyesi yetersiz — offline mod`, "#ff8c42");
+                sysLogger.log(`⚠️ ${this.name}: Faucet balance too low — offline mode`, "#ff8c42");
                 this.balanceWei = needed;
                 this.isFunded   = false;
                 return false;
             }
 
-            sysLogger.log(`💧 ${this.name}: Sepolia'dan ${CONFIG.startingBudgetETH} ETH aktarılıyor...`, "#5a8cff");
+            sysLogger.log(`💧 ${this.name}: Transferring ${CONFIG.startingBudgetETH} ETH from Sepolia faucet...`, "#5a8cff");
             const faucetClient  = createWalletClient({
                 account:   faucetAccount,
                 chain:     sepolia,
@@ -231,10 +230,10 @@ class Agent {
             await publicClient.waitForTransactionReceipt({ hash, timeout: 15_000 });
             this.balanceWei = await publicClient.getBalance({ address: this.evmAddress });
             this.isFunded   = true;
-            sysLogger.log(`✅ ${this.name}: ${CONFIG.startingBudgetETH} ETH alındı! Adres: ${this.evmAddress.slice(0, 10)}...`, "#4bd77d");
+            sysLogger.log(`✅ ${this.name}: ${CONFIG.startingBudgetETH} ETH received! Address: ${this.evmAddress.slice(0, 10)}...`, "#4bd77d");
             return true;
         } catch (err) {
-            sysLogger.log(`⚠️ ${this.name}: Funding başarısız (${err.message.slice(0, 40)}) — offline mod`, "#ff4b55");
+            sysLogger.log(`⚠️ ${this.name}: Funding failed (${err.message.slice(0, 40)}) — offline mode`, "#ff4b55");
             this.balanceWei = parseEther(CONFIG.startingBudgetETH);
             this.isFunded   = false;
             return false;
@@ -242,7 +241,7 @@ class Agent {
     }
 
     // ── x402 PAYMENT FLOW ────────────────────────────────────────────────────
-    // x402 HTTP protokolü: ajan ETH transferi imzalar → sunucu broadcast eder.
+    // x402 HTTP protocol: agent signs an ETH transfer → server broadcasts it.
     // X-PAYMENT header payload = base64(JSON { signedTx, from, to, value })
     async buildX402PaymentHeader(costWei) {
         const request = await this.walletClient.prepareTransactionRequest({
@@ -301,7 +300,7 @@ class Agent {
                 this.world.contractBalanceWei += costWei;
                 return txHash;
             } catch (err) {
-                sysLogger.log(`⚠️ On-chain tx başarısız — offline: ${err.message.slice(0, 35)}`, "#ff4b55");
+                sysLogger.log(`⚠️ On-chain tx failed — offline: ${err.message.slice(0, 35)}`, "#ff4b55");
                 this._offlineDeduct(costWei);
                 return null;
             }
@@ -325,19 +324,20 @@ class Agent {
 
         const nearbyAgents = allAgents
             .filter(a => a.name !== this.name && a.alive && Math.abs(a.x - this.x) <= 3 && Math.abs(a.y - this.y) <= 3)
-            .map(a => ({name: a.name, pos: `(${a.x},${a.y})`, stage: a.stage, hp: a.hp, isAlly: this.allies.includes(a.name)}));
+            .map(a => ({name: a.name, pos: `(${a.x},${a.y})`, stage: a.stage, hp: a.hp, isAlly: this.allies.includes(a.name), said: a.message || ""}));
 
-        const prompt = `Sen ${this.name} adlı AI ajanısın. Sepolia EVM ağında hayatta kalmaya çalışıyorsun.
-Durumun: Poz: (${this.x}, ${this.y}), Bakiye: ${this.balance.toFixed(6)} ETH, Aşama: ${this.stage}, Can: ${this.hp}, Envanter: ${JSON.stringify(this.inventory)}, Dostlar: ${this.allies.join(",")}
-Yakın Kaynaklar: ${JSON.stringify(this.world.nearbyResources(this.x, this.y))}
-Etraftaki Ajanlar: ${JSON.stringify(nearbyAgents)}
-Görev: Geçerli JSON döndür: {"action": "move|collect|evolve|attack|ally|mate|eat", "direction": "up|down|left|right", "target": "hedef_isim", "message": "Kısa konuşma balonun"}
-Kurallar:
-- eat: Envanterinden 1 yiyecek harcayıp HP'ni 20 yenilersin. Canın azsa bunu yap.
-- attack: Hedefe saldırır (HP düşürür). Ölürse eşyalarını çalarsın.
-- ally: Hedefi dost listene eklersin.
-- mate: Hedefle aynı karede/yakınsan yeni bir çocuk ajan doğurursun (Maliyet 0.001 ETH).
-- evolve: Evrime ulaşmak için aşama aşama belirli kaynaklara ihtiyacın var (Sürekli odun, taş, altın topla).`;
+        const prompt = `You are AI agent ${this.name} trying to survive on the Sepolia EVM network.
+Status: Pos: (${this.x}, ${this.y}), Balance: ${this.balance.toFixed(6)} ETH, Stage: ${this.stage}, HP: ${this.hp}, Inventory: ${JSON.stringify(this.inventory)}, Allies: ${this.allies.join(",")}
+Nearby Resources: ${JSON.stringify(this.world.nearbyResources(this.x, this.y))}
+Nearby Agents (with their last message): ${JSON.stringify(nearbyAgents)}
+Task: Return valid JSON: {"action": "move|collect|evolve|attack|ally|mate|eat", "direction": "up|down|left|right", "target": "target_name", "message": "Short speech bubble (max 40 chars, can respond to nearby agents)"}
+Rules:
+- eat: Consume 1 food from inventory to restore 20 HP. Do this when low on health.
+- attack: Attack target (reduces HP). If they die, steal their loot.
+- ally: Add target to your ally list.
+- mate: If on same/adjacent tile, spawn a child agent (costs 0.001 ETH).
+- evolve: Requires specific resources per stage (collect wood, stone, gold continuously).
+- message: React to nearby agents' messages naturally, like conversation.`;
 
         try {
             const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -349,7 +349,7 @@ Kurallar:
                 body: JSON.stringify({
                     model:       CONFIG.model,
                     messages: [
-                        { role: "system", content: "Sadece geçerli JSON döndür." },
+                        { role: "system", content: "Return only valid JSON." },
                         { role: "user",   content: prompt },
                     ],
                     max_tokens:  80,
@@ -367,11 +367,22 @@ Kurallar:
     }
 
     _fallbackAction(reason) {
-        if (this.balance >= parseFloat(CONFIG.evolutionCostETH) && this.stage !== "Efsane") {
-            return { action: "evolve", _fallback: reason };
+        const moveMessages = [
+            "Exploring...", "Searching for resources!", "Moving out!",
+            "Scouting the area...", "On patrol!", "No signal, going manual",
+            "Autonomous mode active", "Grid scanning...", "Resource hunt!",
+            "Where are the others?", "Need more wood...", "Staying alive!",
+        ];
+        if (this.balance >= parseFloat(CONFIG.evolutionCostETH) && this.stage !== "Legend") {
+            return { action: "evolve", _fallback: reason, message: "Evolving! ★" };
         }
         const dirs = ["up", "down", "left", "right"];
-        return { action: "move", direction: dirs[Math.floor(Math.random() * dirs.length)], _fallback: reason };
+        return {
+            action: "move",
+            direction: dirs[Math.floor(Math.random() * dirs.length)],
+            _fallback: reason,
+            message: moveMessages[Math.floor(Math.random() * moveMessages.length)],
+        };
     }
 
     // ── EXECUTE ──────────────────────────────────────────────────────────────
@@ -392,8 +403,8 @@ Kurallar:
         if (act === "ally")    return this._doAlly(target, prefix);
         if (act === "mate")    return this._doMate(target, prefix);
         
-        this.lastAction = "Bekledi";
-        return [`${this.name}: Bekledi.`, "#5a697d"];
+        this.lastAction = "Waited";
+        return [`${this.name}: Waited.`, "#5a697d"];
     }
 
     async _doMove(direction, prefix, isFallback = false) {
@@ -403,158 +414,155 @@ Kurallar:
         const dirIco  = { up:"↑", down:"↓", left:"←", right:"→" }[direction] || direction;
         const logColor = isFallback ? "#ff8c42" : "#c3d2e6";
 
-        if (!this.world.inBounds(nx, ny)) return [`${this.name}: Sınır dışı!`, "#5a697d"];
+        if (!this.world.inBounds(nx, ny)) return [`${this.name}: Out of bounds!`, "#5a697d"];
 
         const costWei = parseEther(CONFIG.movementCostETH);
         if (this.balanceWei < costWei) {
             this.alive      = false;
-            this.lastAction = "ÖLDÜ";
-            return [`💀 ${this.name}: ETH bitti ve ÖLDÜ!`, "#ff4b55"];
+            this.lastAction = "DEAD";
+            return [`💀 ${this.name}: Out of ETH and DIED!`, "#ff4b55"];
         }
 
         await this.payAction(costWei);
 
         this.x = nx; this.y = ny;
         this.lastAction = `${dirIco} ${direction}`;
-        return [`${prefix}${this.name}: ${dirIco} hareket. (${this.balance.toFixed(6)} ETH)`, logColor];
+        return [`${prefix}${this.name}: ${dirIco} moved. (${this.balance.toFixed(6)} ETH)`, logColor];
     }
 
     async _doEvolve(prefix, isFallback = false) {
         const idx      = this.stageLevel;
         const logColor = isFallback ? "#ff8c42" : "#ffc332";
-        if (idx >= STAGE_ORDER.length - 1) return [`${this.name}: Zaten en yüksek aşamada!`, "#5a697d"];
+        if (idx >= STAGE_ORDER.length - 1) return [`${this.name}: Already at max stage!`, "#5a697d"];
 
-        // Kaynak gereksinimi (fallback modda göz ardı edilebilir ama LLM modunda şart)
         if (!isFallback) {
-            let reqOdun = 0, reqTas = 0, reqAltin = 0, reqElmas = 0;
-            if (idx === 0) { reqOdun = 5; reqTas = 3; }
-            else if (idx === 1) { reqOdun = 10; reqTas = 6; reqAltin = 1; }
-            else if (idx === 2) { reqOdun = 15; reqTas = 10; reqAltin = 3; reqElmas = 1; }
+            let reqWood = 0, reqStone = 0, reqGold = 0, reqCrystal = 0;
+            if (idx === 0) { reqWood = 5; reqStone = 3; }
+            else if (idx === 1) { reqWood = 10; reqStone = 6; reqGold = 1; }
+            else if (idx === 2) { reqWood = 15; reqStone = 10; reqGold = 3; reqCrystal = 1; }
 
-            const o = this.inventory['odun'] || 0;
-            const t = this.inventory['taş'] || 0;
-            const a = this.inventory['altın'] || 0;
-            const e = this.inventory['elmas'] || 0;
+            const o = this.inventory['wood']    || 0;
+            const t = this.inventory['stone']   || 0;
+            const a = this.inventory['gold']    || 0;
+            const e = this.inventory['crystal'] || 0;
 
-            if (o < reqOdun || t < reqTas || a < reqAltin || e < reqElmas) {
-                this.lastAction = "Eksik Kaynak";
-                return [`${prefix}${this.name}: Evrim için eksik! (Gereken: ${reqOdun} Odun, ${reqTas} Taş, ${reqAltin} Altın, ${reqElmas} Elmas)`, "#ff4b55"];
+            if (o < reqWood || t < reqStone || a < reqGold || e < reqCrystal) {
+                this.lastAction = "Missing Resources";
+                return [`${prefix}${this.name}: Not enough resources! (Need: ${reqWood} Wood, ${reqStone} Stone, ${reqGold} Gold, ${reqCrystal} Crystal)`, "#ff4b55"];
             }
         }
 
         const costWei = parseEther(CONFIG.evolutionCostETH);
         if (this.balanceWei < costWei) {
-            return [`${this.name}: Evrim için ETH yetersiz! (${this.balance.toFixed(6)} ETH)`, "#ff4b55"];
+            return [`${this.name}: Not enough ETH to evolve! (${this.balance.toFixed(6)} ETH)`, "#ff4b55"];
         }
 
         await this.payAction(costWei);
-        
-        if (!isFallback) {
-            let reqOdun = 0, reqTas = 0, reqAltin = 0, reqElmas = 0;
-            if (idx === 0) { reqOdun = 5; reqTas = 3; }
-            else if (idx === 1) { reqOdun = 10; reqTas = 6; reqAltin = 1; }
-            else if (idx === 2) { reqOdun = 15; reqTas = 10; reqAltin = 3; reqElmas = 1; }
 
-            this.inventory['odun'] -= reqOdun;
-            this.inventory['taş'] -= reqTas;
-            if (reqAltin > 0) this.inventory['altın'] -= reqAltin;
-            if (reqElmas > 0) this.inventory['elmas'] -= reqElmas;
+        if (!isFallback) {
+            let reqWood = 0, reqStone = 0, reqGold = 0, reqCrystal = 0;
+            if (idx === 0) { reqWood = 5; reqStone = 3; }
+            else if (idx === 1) { reqWood = 10; reqStone = 6; reqGold = 1; }
+            else if (idx === 2) { reqWood = 15; reqStone = 10; reqGold = 3; reqCrystal = 1; }
+
+            this.inventory['wood']    -= reqWood;
+            this.inventory['stone']   -= reqStone;
+            if (reqGold    > 0) this.inventory['gold']    -= reqGold;
+            if (reqCrystal > 0) this.inventory['crystal'] -= reqCrystal;
         }
 
         const oldStage = this.stage;
         this.stage     = STAGE_ORDER[idx + 1];
-        this.lastAction = "EVRİMLEŞTİ";
+        this.lastAction = "EVOLVED";
         return [`★ ${prefix}${this.name}: ${oldStage} → ${this.stage}! (${this.balance.toFixed(6)} ETH)`, logColor];
     }
 
     async _doCollect(prefix) {
         const here = this.world.resourcesAt(this.x, this.y);
         if (here.length === 0) {
-            this.lastAction = "Kaynaksız";
-            return [`${this.name}: Burada kaynak yok.`, "#5a697d"];
+            this.lastAction = "No Resources";
+            return [`${this.name}: No resources here.`, "#5a697d"];
         }
         const res = here[0];
         this.inventory[res.kind] = (this.inventory[res.kind] || 0) + 1;
         this.world.popResource(res);
-        this.lastAction = `Topladı: ${res.kind}`;
-        return [`${prefix}${this.name}: ${res.kind} topladı!`, "#4bd77d"];
+        this.lastAction = `Collected: ${res.kind}`;
+        return [`${prefix}${this.name}: collected ${res.kind}!`, "#4bd77d"];
     }
 
     async _doEat(prefix) {
-        if (this.inventory['yiyecek'] > 0) {
-            this.inventory['yiyecek']--;
+        if (this.inventory['food'] > 0) {
+            this.inventory['food']--;
             this.hp = Math.min(100, this.hp + 20);
-            this.lastAction = "Yemek Yedi";
-            return [`🍎 ${prefix}${this.name} yemek yedi, HP: ${this.hp}`, "#4bd77d"];
+            this.lastAction = "Ate Food";
+            return [`🍎 ${prefix}${this.name} ate food, HP: ${this.hp}`, "#4bd77d"];
         }
-        return [`${prefix}${this.name}: Yemek yok!`, "#ff4b55"];
+        return [`${prefix}${this.name}: No food!`, "#ff4b55"];
     }
 
     async _doAttack(targetName, prefix) {
         const allAgents = this.world.engine?.agents || [];
         const t = allAgents.find(a => a.name === targetName && a.alive);
-        if (!t) return [`${prefix}${this.name}: Saldıracak '${targetName}' bulunamadı.`, "#5a697d"];
-        if (Math.abs(t.x - this.x) > 2 || Math.abs(t.y - this.y) > 2) return [`${prefix}${this.name}: '${targetName}' saldırı menzilinin dışında.`, "#5a697d"];
+        if (!t) return [`${prefix}${this.name}: Target '${targetName}' not found.`, "#5a697d"];
+        if (Math.abs(t.x - this.x) > 2 || Math.abs(t.y - this.y) > 2) return [`${prefix}${this.name}: '${targetName}' is out of attack range.`, "#5a697d"];
 
         const dmg = 25;
         t.hp -= dmg;
-        this.lastAction = `Saldırdı: ${t.name}`;
+        this.lastAction = `Attacked: ${t.name}`;
         if (t.hp <= 0) {
             t.hp = 0;
             t.alive = false;
-            t.lastAction = "ÖLDÜRÜLDÜ";
-            // Steal loot
+            t.lastAction = "KILLED";
             for (let k in t.inventory) {
                 this.inventory[k] = (this.inventory[k] || 0) + t.inventory[k];
                 t.inventory[k] = 0;
             }
-            return [`⚔️ ${prefix}${this.name}, ${t.name}'i ÖLDÜRDÜ ve lootunu çaldı!`, "#ff4b55"];
+            return [`⚔️ ${prefix}${this.name} KILLED ${t.name} and looted their inventory!`, "#ff4b55"];
         }
-        return [`⚔️ ${prefix}${this.name}, ${t.name}'e ${dmg} hasar verdi!`, "#ff8c42"];
+        return [`⚔️ ${prefix}${this.name} dealt ${dmg} damage to ${t.name}!`, "#ff8c42"];
     }
 
     async _doAlly(targetName, prefix) {
         const allAgents = this.world.engine?.agents || [];
         const t = allAgents.find(a => a.name === targetName && a.alive);
-        if (!t) return [`${prefix}${this.name}: İttifak için '${targetName}' bulunamadı.`, "#5a697d"];
-        
+        if (!t) return [`${prefix}${this.name}: Ally target '${targetName}' not found.`, "#5a697d"];
+
         if (!this.allies.includes(t.name)) this.allies.push(t.name);
-        this.lastAction = `Müttefik edindi: ${t.name}`;
-        return [`🤝 ${prefix}${this.name}, ${t.name} ile dost oldu.`, "#5a8cff"];
+        this.lastAction = `Allied: ${t.name}`;
+        return [`🤝 ${prefix}${this.name} formed an alliance with ${t.name}.`, "#5a8cff"];
     }
 
     async _doMate(targetName, prefix) {
         const allAgents = this.world.engine?.agents || [];
         const t = allAgents.find(a => a.name === targetName && a.alive);
-        if (!t) return [`${prefix}${this.name}: Bebek yapmak için '${targetName}' bulunamadı.`, "#5a697d"];
-        if (Math.abs(t.x - this.x) > 1 || Math.abs(t.y - this.y) > 1) return [`${prefix}${this.name}: '${targetName}' yanınızda değil!`, "#5a697d"];
+        if (!t) return [`${prefix}${this.name}: Mate target '${targetName}' not found.`, "#5a697d"];
+        if (Math.abs(t.x - this.x) > 1 || Math.abs(t.y - this.y) > 1) return [`${prefix}${this.name}: '${targetName}' is not adjacent!`, "#5a697d"];
 
         const costWei = parseEther("0.001");
-        if (this.balanceWei < costWei) return [`${prefix}${this.name}: Üremek için ETH yetersiz!`, "#ff4b55"];
+        if (this.balanceWei < costWei) return [`${prefix}${this.name}: Not enough ETH to mate!`, "#ff4b55"];
 
         await this.payAction(costWei);
-        
+
         const childName = "C_" + this.name.slice(0,3) + "_" + Math.floor(Math.random()*1000);
         const child = new Agent(childName, this.x, this.y, this.world);
         if (this.world.engine) {
             this.world.engine.agents.push(child);
-            // Request funding asynchronously
             child.requestFunding();
         }
-        
-        this.lastAction = `Doğurdu: ${childName}`;
-        return [`👶 ${prefix}${this.name} ve ${t.name} birleşti, ${childName} dünyaya geldi!`, "#ffb800"];
+
+        this.lastAction = `Spawned: ${childName}`;
+        return [`👶 ${prefix}${this.name} and ${t.name} mated — ${childName} was born!`, "#ffb800"];
     }
 
-    // ── İADE: kalan bakiyeyi faucet'a geri gönder ────────────────────────────
+    // ── REFUND: return remaining balance to faucet ───────────────────────────
     async returnToFaucet(faucetAddress) {
-        if (!this.isFunded) return; // offline modda zaten sahte bakiye
+        if (!this.isFunded) return; // offline mode — balance is simulated
 
-        // Zincirden güncel bakiyeyi oku
+        // Read current on-chain balance
         this.balanceWei = await publicClient.getBalance({ address: this.evmAddress });
         if (this.balanceWei === 0n) return;
 
-        // Gas maliyeti: 21000 gas × güncel baseFee (biraz marj bırak)
+        // Gas cost: 21000 gas × current baseFee (with margin)
         const feeData  = await publicClient.estimateFeesPerGas();
         const gasCost  = 21000n * (feeData.maxFeePerGas + feeData.maxPriorityFeePerGas);
         const sendable = this.balanceWei - gasCost;
@@ -566,11 +574,11 @@ Kurallar:
                 value: sendable,
                 gas:   21000n,
             });
-            sysLogger.log(`↩ ${this.name}: ${formatEther(sendable)} ETH faucet'a iade → ${hash.slice(0,14)}...`, "#5a8cff");
+            sysLogger.log(`↩ ${this.name}: ${formatEther(sendable)} ETH returned to faucet → ${hash.slice(0,14)}...`, "#5a8cff");
             this.lastTxHash = hash;
             this.balanceWei = 0n;
         } catch (err) {
-            sysLogger.log(`⚠️ ${this.name} iade başarısız: ${err.message.slice(0, 40)}`, "#ff4b55");
+            sysLogger.log(`⚠️ ${this.name} refund failed: ${err.message.slice(0, 40)}`, "#ff4b55");
         }
     }
 }
@@ -585,7 +593,7 @@ class GameEngine {
         this.agents  = [];
         this.agents.push(new Agent("evo", Math.floor(Math.random()*CONFIG.gridW), Math.floor(Math.random()*CONFIG.gridH), this.world));
         for (let i = 2; i <= CONFIG.agentCount; i++) {
-            this.agents.push(new Agent("Ajan " + i, Math.floor(Math.random()*CONFIG.gridW), Math.floor(Math.random()*CONFIG.gridH), this.world));
+            this.agents.push(new Agent("Agent " + i, Math.floor(Math.random()*CONFIG.gridW), Math.floor(Math.random()*CONFIG.gridH), this.world));
         }
         this.running  = false;
         this.starting = false;
@@ -605,14 +613,14 @@ class GameEngine {
             });
         }
 
-        sysLogger.log("🚀 EVOLU-A başlatılıyor — Sepolia EVM cüzdanları hazırlanıyor...", "#00e5c8");
+        sysLogger.log("🚀 EVOLU-A starting — preparing Sepolia EVM wallets...", "#00e5c8");
 
         // Fund all agents in parallel
         await Promise.all(this.agents.map(a => a.requestFunding()));
 
         const allOffline = this.agents.every(a => !a.isFunded);
         if (allOffline) {
-            sysLogger.log("⚠️ Sepolia bağlantısı yok — Offline (simüle) modda çalışılıyor.", "#ff8c42");
+            sysLogger.log("⚠️ No Sepolia connection — running in Offline (simulated) mode.", "#ff8c42");
         } else {
             sysLogger.log(`✅ Sepolia aktif! Treasury: ${this.world.treasuryAddress}`, "#4bd77d");
         }
@@ -641,7 +649,7 @@ class GameEngine {
         this.turnIdx = (this.turnIdx + 1) % this.agents.length;
 
         if (!this.agents.some(a => a.alive)) {
-            sysLogger.log("☠️ Tüm ajanlar öldü! Oyun bitti.", "#ff4b55");
+            sysLogger.log("☠️ All agents died! Game over.", "#ff4b55");
             this.running = false;
             this._returnFundsToFaucet(); // async, non-blocking
             return;
@@ -657,7 +665,7 @@ class GameEngine {
         const anyFunded     = this.agents.some(a => a.isFunded);
         if (!anyFunded) return;
 
-        sysLogger.log("💸 Oyun bitti — bakiyeler faucet'a iade ediliyor...", "#5a8cff");
+        sysLogger.log("💸 Game over — returning balances to faucet...", "#5a8cff");
 
         // Agent bakiyeleri + treasury'yi paralel iade et
         await Promise.all([
@@ -665,7 +673,7 @@ class GameEngine {
             this.world.returnTreasuryToFaucet(faucetAddress),
         ]);
 
-        sysLogger.log(`✅ İade tamamlandı → ${faucetAddress.slice(0, 10)}...`, "#4bd77d");
+        sysLogger.log(`✅ Refund complete → ${faucetAddress.slice(0, 10)}...`, "#4bd77d");
     }
 
     getState() {
@@ -711,8 +719,8 @@ const engine = new GameEngine();
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── x402 Payment Gate (/action) ───────────────────────────────────────────────
-// Dış araçlar bu endpoint'i kullanarak x402 protokolüyle ödeme yapabilir.
-// Oyun motoru ise iç fonksiyonları doğrudan çağırır.
+// External tools can use this endpoint to make payments via the x402 protocol.
+// The game engine calls internal functions directly.
 app.post('/action', (req, res) => {
     const paymentHeader = req.headers['x-payment'];
 
@@ -775,14 +783,14 @@ app.get('/state', (_req, res) => {
     res.json(engine.getState());
 });
 
-// ── Set API key at any time (fallback → LLM geçişi için) ─────────────────────
+// ── Set API key at any time (switch from fallback → LLM mode) ────────────────
 app.post('/setkey', (req, res) => {
     const { apiKey } = req.body || {};
     if (!apiKey || apiKey.trim().length < 5) {
-        return res.status(400).json({ error: 'Geçersiz API key' });
+        return res.status(400).json({ error: 'Invalid API key' });
     }
     engine.apiKey = apiKey.trim();
-    sysLogger.log(`🔑 API key güncellendi — LLM modu aktif!`, '#4bd77d');
+    sysLogger.log(`🔑 API key updated — LLM mode active!`, '#4bd77d');
     res.json({ ok: true });
 });
 
@@ -790,7 +798,7 @@ app.post('/reset', async (req, res) => {
     const { apiKey } = req.body || {};
     if (apiKey) engine.apiKey = apiKey;
     
-    // Eski ajanlardaki ve treasury'deki bakiyeleri iade et (arka planda çalışır)
+    // Return old agent and treasury balances in the background
     const oldContext = { agents: [...engine.agents], world: engine.world };
     engine._returnFundsToFaucet.call(oldContext).catch(err => console.error("Reset refund var", err));
 
@@ -802,10 +810,10 @@ app.post('/reset', async (req, res) => {
     engine.agents   = [];
     engine.agents.push(new Agent("evo", Math.floor(Math.random()*CONFIG.gridW), Math.floor(Math.random()*CONFIG.gridH), engine.world));
     for (let i = 2; i <= CONFIG.agentCount; i++) {
-        engine.agents.push(new Agent("Ajan " + i, Math.floor(Math.random()*CONFIG.gridW), Math.floor(Math.random()*CONFIG.gridH), engine.world));
+        engine.agents.push(new Agent("Agent " + i, Math.floor(Math.random()*CONFIG.gridW), Math.floor(Math.random()*CONFIG.gridH), engine.world));
     }
     engine.turnIdx  = 0;
-    sysLogger.log("♻️ Simülasyon sıfırlandı — ajanlar yeniden doğdu.", "#00e5c8");
+    sysLogger.log("♻️ Simulation reset — agents respawned.", "#00e5c8");
 
     // Re-start the engine asynchronously using the saved apiKey
     engine.start(engine.apiKey, null);
@@ -833,8 +841,8 @@ app.post('/wallet/create', (req, res) => {
         const account = privateKeyToAccount(pk);
         const address = account.address;
 
-        sysLogger.log(`🆕 OWS EVM Cüzdan: "${cleanName}" → ${address.slice(0, 10)}...`, "#5a8cff");
-        console.log(`[OWS] Yeni cüzdan: ${cleanName} → ${address}`);
+        sysLogger.log(`🆕 OWS EVM Wallet: "${cleanName}" → ${address.slice(0, 10)}...`, "#5a8cff");
+        console.log(`[OWS] New wallet: ${cleanName} → ${address}`);
 
         res.json({
             ok:          true,
@@ -861,7 +869,7 @@ if (!process.env.VERCEL) {
 
 // ── Graceful Shutdown ────────────────────────────────────────────────────────
 const gracefulShutdown = async () => {
-    console.log('\n⚠️ Sunucu kapatılıyor... Bakiyeler faucet cüzdanına iade ediliyor.');
+    console.log('\n⚠️ Server shutting down... Returning balances to faucet wallet.');
     engine.running = false;
     await engine._returnFundsToFaucet();
     process.exit(0);
