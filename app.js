@@ -205,7 +205,7 @@ async function fetchState() {
 
         if (state.starting && dom.simStatus) {
             dom.simStatus.innerHTML = `<div class="pulse-dot" style="background:#5a8cff"></div><span style="color:#5a8cff">Funding agents from Sepolia...</span>`;
-        } else if (state.running === false && dom.simStatus) {
+        } else if (state.running === false && dom.simStatus && state.agents && state.agents.length > 0 && !state.agents.some(a => a.alive)) {
             dom.simStatus.innerHTML = `<div class="pulse-dot" style="background:#ff4b55;animation:none;box-shadow:none;"></div><span style="color:#ff4b55">Simulation Ended</span>`;
         } else if (dom.simStatus) {
             const modeLabel = state.agents?.some(a => a.isFunded)
