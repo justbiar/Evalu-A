@@ -789,6 +789,11 @@ app.post('/setkey', (req, res) => {
 app.post('/reset', async (req, res) => {
     const { apiKey } = req.body || {};
     if (apiKey) engine.apiKey = apiKey;
+    
+    // Eski ajanlardaki ve treasury'deki bakiyeleri iade et (arka planda çalışır)
+    const oldContext = { agents: [...engine.agents], world: engine.world };
+    engine._returnFundsToFaucet.call(oldContext).catch(err => console.error("Reset refund var", err));
+
     // Full simulation restart — recreate world, agents, and re-run
     engine.running  = false;
     engine.starting = false;
@@ -851,3 +856,14 @@ app.listen(PORT, () => {
     console.log(`RPC              → ${SEPOLIA_RPC}`);
     console.log(`x402 Action Gate → http://localhost:${PORT}/action`);
 });
+
+// ── Graceful Shutdown ────────────────────────────────────────────────────────
+const gracefulShutdown = async () => {
+    console.log('\n⚠️ Sunucu kapatılıyor... Bakiyeler faucet cüzdanına iade ediliyor.');
+    engine.running = false;
+    await engine._returnFundsToFaucet();
+    process.exit(0);
+};
+
+process.on('SIGINT', gracefulShutdown);
+process.on('SIGTERM', gracefulShutdown);
