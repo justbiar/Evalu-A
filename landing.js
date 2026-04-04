@@ -275,20 +275,20 @@ document.getElementById('launchModalConfirm')?.addEventListener('click', async f
     const apiKey          = document.getElementById('lm-api-key')?.value.trim() || '';
     const model           = document.getElementById('lm-model')?.value || 'meta-llama/llama-3.2-3b-instruct:free';
     const agentNameValues = [...document.querySelectorAll('.lm-agent-name')].map(i => i.value.trim() || i.placeholder);
-    const walletId        = activeWallet?.walletId || null;
+    const faucetPrivateKey = activeWallet?.pk || null;
 
     showLaunchStep(2);
 
     try {
         const statusMsg = document.getElementById('launchStatusMsg');
-        if (statusMsg) statusMsg.textContent = walletId
+        if (statusMsg) statusMsg.textContent = faucetPrivateKey
             ? `Funding agents from ${activeWallet.name}...`
             : 'Preparing simulated wallets...';
 
         const createRes = await fetch(`${API_URL}/missions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: missionName, createdBy, apiKey, model, walletId, agentNames: agentNameValues })
+            body: JSON.stringify({ name: missionName, createdBy, apiKey, model, faucetPrivateKey, agentNames: agentNameValues })
         });
 
         if (!createRes.ok) {
