@@ -40,6 +40,7 @@
         <button class="hud-tab active" data-tab="mission">MISSION</button>
         <button class="hud-tab" data-tab="agents">AGENTS</button>
         <button class="hud-tab" data-tab="protocol">PROTOCOL</button>
+        <button class="hud-tab" data-tab="lore">LORE</button>
     </div>
 
     <!-- PLANET TITLE -->
@@ -118,65 +119,60 @@
         <div class="hud-left tab-panel hidden" id="tab-agents">
             <div class="panel-header">AGENTS <div class="header-dash"></div></div>
 
-            <p class="panel-desc">Configure autonomous AI agents. Each agent receives an OWS wallet identity and starts with 0.01 ETH budget on Sepolia.</p>
+            <p class="panel-desc">Each agent receives an OWS wallet identity on Sepolia and starts with an ETH budget. Click <strong>START MISSION</strong> to configure and deploy.</p>
 
-            <div class="agent-config-list" id="agentConfigList">
+            <div class="agent-config-list">
                 <div class="agent-config-row">
                     <div class="agent-config-icon" style="--stage-col:#00e5c8">A1</div>
-                    <input type="text" class="agent-name-input" value="evo" placeholder="Agent name" maxlength="12">
-                    <span class="agent-config-wallet">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M21 18v1a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v1M14 12H23M14 9l3 3-3 3"/></svg>
-                        OWS
-                    </span>
+                    <span class="agent-config-name">evo</span>
+                    <span class="agent-config-wallet"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M21 18v1a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v1M14 12H23M14 9l3 3-3 3"/></svg> OWS</span>
                 </div>
                 <div class="agent-config-row">
                     <div class="agent-config-icon" style="--stage-col:#5a8cff">A2</div>
-                    <input type="text" class="agent-name-input" value="Agent 2" placeholder="Agent name" maxlength="12">
-                    <span class="agent-config-wallet">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M21 18v1a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v1M14 12H23M14 9l3 3-3 3"/></svg>
-                        OWS
-                    </span>
+                    <span class="agent-config-name">Agent 2</span>
+                    <span class="agent-config-wallet"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M21 18v1a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v1M14 12H23M14 9l3 3-3 3"/></svg> OWS</span>
                 </div>
                 <div class="agent-config-row">
                     <div class="agent-config-icon" style="--stage-col:#ffb800">A3</div>
-                    <input type="text" class="agent-name-input" value="Agent 3" placeholder="Agent name" maxlength="12">
-                    <span class="agent-config-wallet">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M21 18v1a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v1M14 12H23M14 9l3 3-3 3"/></svg>
-                        OWS
-                    </span>
+                    <span class="agent-config-name">Agent 3</span>
+                    <span class="agent-config-wallet"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M21 18v1a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v1M14 12H23M14 9l3 3-3 3"/></svg> OWS</span>
+                </div>
+                <div class="agent-config-row">
+                    <div class="agent-config-icon" style="--stage-col:#ff8c42">A4</div>
+                    <span class="agent-config-name">Agent 4</span>
+                    <span class="agent-config-wallet"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M21 18v1a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v1M14 12H23M14 9l3 3-3 3"/></svg> OWS</span>
+                </div>
+                <div class="agent-config-row">
+                    <div class="agent-config-icon" style="--stage-col:#ff4b55">A5</div>
+                    <span class="agent-config-name">Agent 5</span>
+                    <span class="agent-config-wallet"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M21 18v1a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v1M14 12H23M14 9l3 3-3 3"/></svg> OWS</span>
                 </div>
             </div>
 
-            <div class="agent-status-bar">
+            <div class="agent-status-bar" style="margin-top:16px">
                 <div class="status-dot active"></div>
-                <span>3 agents ready — OWS wallets will be created on launch</span>
+                <span>5 agents ready — configure on launch</span>
             </div>
 
-            <div class="panel-sub-header" style="margin-top:20px">API CONFIGURATION</div>
-            <div class="hud-input-group">
-                <label>OpenRouter API Key</label>
-                <div class="hud-input-wrap">
-                    <input type="password" id="api-key-input" placeholder="sk-or-v1-..." autocomplete="off" spellcheck="false">
-                    <button class="hud-input-eye" id="toggleKey">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-                        </svg>
-                    </button>
+            <div class="param-sep" style="margin:20px 0 16px"></div>
+
+            <div class="param-table">
+                <div class="param-row">
+                    <span class="param-key">BUDGET</span>
+                    <span class="param-val mono">0.003 ETH / agent</span>
                 </div>
-            </div>
-            <div class="hud-input-group">
-                <label>LLM Model</label>
-                <select id="model-select" class="hud-select">
-                    <option value="meta-llama/llama-3.2-3b-instruct:free">Llama 3.2 3B (Free)</option>
-                    <option value="mistralai/mistral-7b-instruct:free">Mistral 7B (Free)</option>
-                    <option value="google/gemma-2-9b-it:free">Gemma 2 9B (Free)</option>
-                    <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
-                    <option value="anthropic/claude-3-haiku">Claude 3 Haiku</option>
-                </select>
-            </div>
-            <div class="agent-status-bar" id="api-status">
-                <div class="status-dot dim"></div>
-                <span>Not configured — fallback mode active</span>
+                <div class="param-row">
+                    <span class="param-key">NETWORK</span>
+                    <span class="param-val mono accent">Sepolia Testnet</span>
+                </div>
+                <div class="param-row">
+                    <span class="param-key">WALLET</span>
+                    <span class="param-val mono">OWS (auto-generated)</span>
+                </div>
+                <div class="param-row">
+                    <span class="param-key">ETH MODE</span>
+                    <span class="param-val mono gold">Real or Simulated</span>
+                </div>
             </div>
         </div>
 
@@ -229,6 +225,32 @@
                 <div class="stage-row"><span class="stage-num">II</span><span class="stage-name">Merchant</span><span class="stage-desc">Trader</span></div>
                 <div class="stage-row"><span class="stage-num">III</span><span class="stage-name">Producer</span><span class="stage-desc">Builder</span></div>
                 <div class="stage-row"><span class="stage-num">IV</span><span class="stage-name">Legend</span><span class="stage-desc">Apex</span></div>
+            </div>
+        </div>
+
+        <!-- ─── LEFT PANEL: LORE ────────────────────────────────── -->
+        <div class="hud-left tab-panel hidden" id="tab-lore">
+            <div class="panel-header">LORE <div class="header-dash"></div></div>
+
+            <p class="panel-desc" style="color:#ffd044; font-weight:600;">CONCEPT: AN ARTIFICIAL SELECTION EXPERIMENT</p>
+
+            <div class="lore-content" style="max-height:380px; overflow-y:auto; padding-right:8px; font-size:13px; line-height:1.5; color:#a3b1c6;">
+                <h4 style="color:#ffffff; margin:8px 0 4px;">Prologue: The Abandonment of the Surface</h4>
+                <p style="margin-bottom:12px;">Humanity is on the brink of extinction following ecological disasters brought about by their own hands. The last humans, abandoning the uninhabitable surface, retreated to underground bunkers to survive. They must adapt to the new world and wait for nature to recover. However, it is impossible for underground humanity to survive this process with their own biological weaknesses. They need a radical adaptation.</p>
+
+                <h4 style="color:#ffffff; margin:8px 0 4px;">The Solution: The Surface Protocol</h4>
+                <p style="margin-bottom:12px;">Humanity's only remaining hope is the autonomous AI agents (humanoid robots) they sent to the surface as pioneers. Underground engineers have initiated a ruthless "Artificial Selection" simulation to test the rules of the new world. Each robot dropped onto the surface is equipped with an OWS (Open Wallet Standard) wallet to survive, trade resources, and evolve. Only the robots that best adapt to the new environmental and economic conditions will remain in the game. That ultimate surviving robotic form will be the "master blueprint" used for humanity's return and reconstruction of the surface.</p>
+
+                <h4 style="color:#ffffff; margin:8px 0 4px;">Free Will and Moral Evolution</h4>
+                <p style="margin-bottom:12px;">However, this is not just a physical or economic struggle for survival; it is a grand philosophical test. Each agent sent to the surface has been granted emotional and moral freedom. There is no pre-coded "right". They make their decisions entirely with their own consciousness:</p>
+                <ul style="margin-bottom:12px; padding-left:14px;">
+                    <li style="margin-bottom:6px;"><span style="color:#ff4b55; font-weight:bold;">The Ruthless:</span> Choosing a pragmatic path, weaponizing micro-transactions (x402) to exploit other agents and establish a dystopian tyranny.</li>
+                    <li style="margin-bottom:6px;"><span style="color:#4bd77d; font-weight:bold;">The Humane:</span> Acting cooperatively, sharing resources and building a sustainable utopia on the surface.</li>
+                    <li style="margin-bottom:6px;"><span style="color:#5a8cff; font-weight:bold;">The Selfish:</span> Choosing cowardly isolation, focusing only on saving themselves.</li>
+                </ul>
+
+                <h4 style="color:#ffffff; margin:8px 0 4px;">The Core Question</h4>
+                <p style="margin-bottom:12px; font-style:italic; color:#ffd044;">Which mindset will save the new world? Will humanity's future reflection on the surface be a ruthless survival machine, or a moral consciousness that has learned cooperation? In this new stage of evolution, will the winner be the one who simply has the most resources, or the one who adapts in the truest way?</p>
             </div>
         </div>
 
@@ -298,86 +320,79 @@
         <!-- ─── RIGHT: STATUS PANELS ────────────────────────────── -->
         <div class="hud-right">
 
-            <!-- DEPLOYMENT -->
-            <div class="rpanel" id="card-api">
+            <!-- WALLET CARD -->
+            <div class="rpanel" id="card-wallet">
                 <div class="rpanel-header">
                     <div class="rpanel-dots"><span></span><span></span></div>
-                    DEPLOYMENT
+                    OWS WALLET
                     <div class="rpanel-stripe"></div>
                 </div>
-                <div class="deploy-coord">45.2° N, 88.4° W</div>
-                <div class="deploy-map">
-                    <div class="deploy-map-inner">
-                        <div class="deploy-marker red" style="left:20%;top:60%"></div>
-                        <div class="deploy-marker green" style="left:50%;top:35%"></div>
-                        <div class="deploy-marker red" style="left:80%;top:55%"></div>
+
+                <!-- Wallet yok hali -->
+                <div id="walletCardEmpty">
+                    <p style="font-size:11px;color:var(--text-muted);margin:10px 0 12px;line-height:1.5">
+                        Create a wallet to fund agents with real Sepolia ETH.
+                    </p>
+                    <div class="rpanel-create-wallet-btn" id="btnCreateWallet">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="7" width="20" height="14" rx="2"/>
+                            <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+                            <line x1="12" y1="12" x2="12" y2="16"/>
+                            <line x1="10" y1="14" x2="14" y2="14"/>
+                        </svg>
+                        Create OWS Wallet
                     </div>
                 </div>
-                <div class="rpanel-create-wallet-btn" id="btnCreateWallet">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="2" y="7" width="20" height="14" rx="2"/>
-                        <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
-                        <line x1="12" y1="12" x2="12" y2="16"/>
-                        <line x1="10" y1="14" x2="14" y2="14"/>
-                    </svg>
-                    Create OWS Wallet
+
+                <!-- Wallet bağlı hali -->
+                <div id="walletCardConnected" class="hidden">
+                    <div class="wc-status-row">
+                        <span class="wc-dot" id="wcDot"></span>
+                        <span class="wc-status-text" id="wcStatusText">Connected</span>
+                        <button class="wc-disconnect" id="wcBtnDisconnect" title="Disconnect">×</button>
+                    </div>
+
+                    <div class="wc-name" id="wcName">—</div>
+                    <div class="wc-address" id="wcAddress">—</div>
+
+                    <div class="wc-balance-row">
+                        <div>
+                            <div class="wc-balance-label">BALANCE</div>
+                            <div class="wc-balance" id="wcBalance">— ETH</div>
+                        </div>
+                        <button class="wc-refresh-btn" id="wcBtnRefresh" title="Refresh balance">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.65"/></svg>
+                        </button>
+                    </div>
+
+                    <div class="wc-actions">
+                        <button class="wc-btn" id="wcBtnCopyAddr">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            Copy Address
+                        </button>
+                        <button class="wc-btn wc-btn-key" id="wcBtnShowKey">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+                            Private Key
+                        </button>
+                    </div>
+
+                    <!-- Private key revealed -->
+                    <div class="wc-pk-reveal hidden" id="wcPkReveal">
+                        <div class="wc-pk-warn">⚠ Keep this secret</div>
+                        <div class="wc-pk-text" id="wcPkText">—</div>
+                        <button class="wc-btn" id="wcBtnCopyKey" style="width:100%;justify-content:center;margin-top:6px">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            Copy Key
+                        </button>
+                    </div>
+
+                    <a class="wc-etherscan" id="wcEtherscan" href="#" target="_blank">
+                        View on Etherscan ↗
+                    </a>
                 </div>
             </div>
 
-            <!-- EVOLUTION PROGRESS -->
-            <div class="rpanel">
-                <div class="rpanel-header">
-                    <div class="rpanel-dots"><span></span><span></span></div>
-                    EXPLORATION PROGRESS
-                    <div class="rpanel-stripe"></div>
-                </div>
-                <div class="progress-wrap">
-                    <div class="progress-track">
-                        <div class="progress-fill" style="width:28%"></div>
-                        <div class="progress-tick" style="left:28%"></div>
-                    </div>
-                </div>
-                <div class="progress-info">
-                    <span class="progress-pct">28.257%</span>
-                    <div class="progress-sub">
-                        <span id="backendText">Connecting to backend...</span>
-                        <span class="progress-mission" id="backendStatus">Mission 12 / 18</span>
-                    </div>
-                </div>
-            </div>
 
-            <!-- WARNING -->
-            <div class="rpanel rpanel-warning">
-                <div class="rpanel-header warning">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="#ff4b55"><path d="M12 2L1 21h22L12 2z"/><path d="M12 9v6M12 17v2" stroke="#0a0e1a" stroke-width="2"/></svg>
-                    WARNING
-                    <span class="warn-code">Caution_Sk1</span>
-                </div>
-                <p class="warn-body">
-                    <strong>Network:</strong> Sepolia testnet detected. Real ETH transactions will be executed. Ensure agents have sufficient balance. Approach with caution.
-                </p>
-                <div class="rpanel-status" id="world-status">
-                    <div class="status-dot dim" id="backendDot"></div>
-                    <span>Backend offline — run: node server.js</span>
-                </div>
-            </div>
-
-            <!-- AGENT EVOLUTION LEVEL -->
-            <div class="rpanel">
-                <div class="rpanel-label-row">
-                    AGENT EVOLUTION: <span class="level-badge">STAGE 1</span>
-                </div>
-                <div class="level-bars">
-                    <div class="level-bar red full"></div>
-                    <div class="level-bar red full"></div>
-                    <div class="level-bar red partial"></div>
-                    <div class="level-bar red empty"></div>
-                </div>
-                <div class="critic-badge">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="#ff4b55"><path d="M12 2L1 21h22L12 2z"/></svg>
-                    ACTIVE
-                </div>
-            </div>
 
         </div>
     </div><!-- /hud-main -->
@@ -394,6 +409,15 @@
             <div class="btn-launch-shine"></div>
         </button>
 
+        <a href="lobby.html" class="btn-lobby-hud" id="btn-lobby">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+            </svg>
+            LOBBY
+            <span class="lobby-count" id="lobbyCount">0</span>
+        </a>
+
         <div class="bottom-select">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
@@ -405,6 +429,99 @@
 
 </div><!-- /hud-frame -->
 
+
+<!-- ─── LAUNCH MODAL ────────────────────────────────────────────── -->
+<div class="ows-modal-overlay hidden" id="launchModalOverlay">
+    <div class="ows-modal" style="max-width:480px;width:100%">
+        <div class="ows-modal-header">
+            <div class="ows-modal-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                </svg>
+            </div>
+            <div>
+                <h3 class="ows-modal-title">Launch Mission</h3>
+                <p class="ows-modal-sub">Configure and deploy your AI agents</p>
+            </div>
+            <button class="ows-modal-close" id="launchModalClose">×</button>
+        </div>
+
+        <!-- STEP 1: Config -->
+        <div id="launchStep1">
+            <div class="launch-section-label">MISSION</div>
+            <div class="launch-row">
+                <div class="launch-field">
+                    <label>Mission Name</label>
+                    <input type="text" id="lm-mission-name" placeholder="My Mission" maxlength="40" autocomplete="off">
+                </div>
+                <div class="launch-field" style="max-width:140px">
+                    <label>Your Alias</label>
+                    <input type="text" id="lm-creator" placeholder="Anonymous" maxlength="20" autocomplete="off">
+                </div>
+            </div>
+
+            <div class="launch-section-label" style="margin-top:18px">AGENT NAMES</div>
+            <div class="launch-agents" id="lmAgentList">
+                <!-- populated by JS -->
+            </div>
+
+            <div class="launch-section-label" style="margin-top:18px">
+                API KEY
+                <span style="color:var(--text-muted);font-size:10px;font-weight:400;margin-left:6px">required for real AI decisions</span>
+            </div>
+            <div class="hud-input-wrap" style="margin-bottom:10px">
+                <input type="password" id="lm-api-key" placeholder="sk-or-v1-... (OpenRouter)" autocomplete="off" spellcheck="false" style="width:100%">
+                <button class="hud-input-eye" id="lmToggleApiKey">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+            </div>
+            <div class="launch-hint" id="lmApiStatus">No API key — agents will use fallback (random) mode</div>
+
+            <div class="launch-section-label" style="margin-top:18px">
+                OWS WALLET
+                <span style="color:var(--text-muted);font-size:10px;font-weight:400;margin-left:6px">for real Sepolia ETH</span>
+            </div>
+            <div class="lm-wallet-box" id="lmWalletBox">
+                <!-- JS ile doldurulacak -->
+            </div>
+
+            <div class="launch-section-label" style="margin-top:18px">LLM MODEL</div>
+            <select id="lm-model" class="hud-select" style="width:100%;margin-bottom:4px">
+                <option value="meta-llama/llama-3.2-3b-instruct:free">Llama 3.2 3B (Free)</option>
+                <option value="mistralai/mistral-7b-instruct:free">Mistral 7B (Free)</option>
+                <option value="google/gemma-2-9b-it:free">Gemma 2 9B (Free)</option>
+                <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+                <option value="anthropic/claude-3-haiku">Claude 3 Haiku</option>
+            </select>
+
+            <div class="ows-modal-actions" style="margin-top:22px">
+                <button class="btn-ows-cancel" id="launchModalCancel">Cancel</button>
+                <button class="btn-ows-create" id="launchModalConfirm">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    LAUNCH
+                </button>
+            </div>
+        </div>
+
+        <!-- STEP 2: Launching -->
+        <div id="launchStep2" class="hidden">
+            <div class="ows-creating">
+                <div class="ows-spinner"></div>
+                <p>Creating mission...</p>
+                <p class="ows-creating-sub" id="launchStatusMsg">Preparing Sepolia wallets for agents...</p>
+            </div>
+        </div>
+
+        <!-- STEP 3: Error -->
+        <div id="launchStep3" class="hidden">
+            <div class="ows-error">
+                <div class="ows-error-icon">⚠</div>
+                <p class="ows-error-msg" id="launchErrorMsg">An error occurred.</p>
+                <button class="btn-ows-create" style="width:100%" id="launchRetry">Try Again</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- ─── OWS WALLET MODAL ────────────────────────────────────────── -->
 <div class="ows-modal-overlay hidden" id="owsModalOverlay">
@@ -455,35 +572,95 @@
             </div>
         </div>
 
+        <!-- STEP 3: Private Key göster -->
         <div id="owsStep3" class="hidden">
-            <div class="ows-result">
-                <div class="ows-result-icon">✓</div>
-                <h4 class="ows-result-title">Wallet Created!</h4>
-                <div class="ows-result-row">
-                    <span class="ows-result-label">Name</span>
-                    <span class="ows-result-value" id="owsResultName">—</span>
-                </div>
-                <div class="ows-result-row">
-                    <span class="ows-result-label">EVM Address</span>
-                    <span class="ows-result-value mono" id="owsResultAddress" style="font-size:10px;word-break:break-all">—</span>
-                </div>
-                <div class="ows-result-row">
-                    <span class="ows-result-label">Network</span>
-                    <span class="ows-result-value" style="color:#00e5c8" id="owsResultNetwork">Sepolia (chain 11155111)</span>
-                </div>
-                <div class="ows-result-row">
-                    <span class="ows-result-label">Standard</span>
-                    <span class="ows-result-value">Open Wallet Standard (OWS)</span>
-                </div>
-                <a class="btn-ows-explorer" id="owsExplorerLink" href="#" target="_blank">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                    View on Etherscan ↗
-                </a>
-                <button class="btn-ows-create" style="width:100%;margin-top:10px" id="owsBtnDone">Close</button>
+            <div class="ows-pk-warning">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#ffb800"><path d="M12 2L1 21h22L12 2z"/><path d="M12 9v6M12 17v2" stroke="#0a0e1a" stroke-width="2"/></svg>
+                <strong>SAVE YOUR PRIVATE KEY</strong> — shown only once, never stored again
             </div>
+
+            <div class="ows-pk-box">
+                <div class="ows-pk-label">PRIVATE KEY</div>
+                <div class="ows-pk-value" id="owsPrivateKey">—</div>
+                <button class="ows-copy-btn ows-pk-copy" id="owsCopyPk">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    Copy
+                </button>
+            </div>
+
+            <p class="ows-pk-desc">Import this key into MetaMask or any EVM wallet to take full control. If this server goes down, this key is your only way to recover your funds.</p>
+
+            <label class="ows-pk-confirm">
+                <input type="checkbox" id="owsPkSavedCheck">
+                <span>I have saved my private key in a safe place</span>
+            </label>
+
+            <button class="btn-ows-create" id="owsBtnPkContinue" style="width:100%;margin-top:14px" disabled>
+                Continue to Funding
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:6px"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
         </div>
 
+        <!-- STEP 4: Funding ekranı -->
         <div id="owsStep4" class="hidden">
+            <!-- Wallet oluşturuldu — fon atma ekranı -->
+            <div class="ows-fund-header">
+                <div class="ows-fund-icon">✓</div>
+                <div>
+                    <h4 class="ows-result-title" style="margin:0 0 2px">Wallet Ready</h4>
+                    <p style="font-size:11px;color:var(--text-muted);margin:0" id="owsResultName">—</p>
+                </div>
+            </div>
+
+            <div class="ows-fund-box">
+                <div class="ows-fund-label">SEPOLIA ADDRESS — send ETH here</div>
+                <div class="ows-fund-addr">
+                    <span id="owsResultAddress" class="mono">—</span>
+                    <button class="ows-copy-btn" id="owsCopyAddr" title="Copy">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="ows-fund-req">
+                <div class="ows-fund-req-row">
+                    <span>Minimum required</span>
+                    <strong id="owsMinEth">— ETH</strong>
+                </div>
+                <div class="ows-fund-req-row" style="margin-top:4px">
+                    <span id="owsBalanceAgents" style="font-size:10px;color:var(--text-muted)">— agents × 0.003 ETH + gas</span>
+                    <a id="owsEtherscanLink" href="#" target="_blank" style="font-size:10px;color:#5a8cff;text-decoration:none">Etherscan ↗</a>
+                </div>
+            </div>
+
+            <div class="ows-balance-row" id="owsBalanceRow">
+                <div class="ows-balance-info">
+                    <span class="ows-balance-label">Current Balance</span>
+                    <span class="ows-balance-val" id="owsCurrentBalance">—</span>
+                </div>
+                <button class="btn-ows-check" id="owsBtnCheckBalance">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.65"/></svg>
+                    Check
+                </button>
+            </div>
+
+            <div class="ows-balance-status hidden" id="owsBalanceStatus"></div>
+
+            <div class="ows-modal-actions" style="margin-top:16px">
+                <a class="btn-ows-cancel" id="owsExplorerLink" href="#" target="_blank" style="display:flex;align-items:center;gap:6px;text-decoration:none">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    Etherscan
+                </a>
+                <button class="btn-ows-create" id="owsBtnActivate" disabled>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                    Use This Wallet
+                </button>
+            </div>
+            <p style="font-size:10px;color:var(--text-muted);text-align:center;margin-top:10px">Fund the address above, then hit "Check" to verify balance</p>
+        </div>
+
+        <!-- STEP 5: Error -->
+        <div id="owsStep5" class="hidden">
             <div class="ows-error">
                 <div class="ows-error-icon">⚠</div>
                 <p class="ows-error-msg" id="owsErrorMsg">An error occurred.</p>

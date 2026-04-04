@@ -1,6 +1,8 @@
 import express from 'express';
+console.log("[DEBUG] Starting server.js execution...");
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import {
@@ -20,14 +22,28 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 app.use(cors());
 app.use(express.json());
+// Büyük PNG dosyaları için manuel route — express.static'ten ÖNCE olmalı
+app.use((req, res, next) => {
+    const decoded = decodeURIComponent(req.path);
+    let filePath = null;
+    const robotM  = decoded.match(/^\/robot level\/(\d+\.png)$/);
+    const assetsM = decoded.match(/^\/assets\/([\w\-]+\.png)$/);
+    if (robotM)  filePath = path.join(__dirname, 'robot level', robotM[1]);
+    else if (assetsM) filePath = path.join(__dirname, 'assets', assetsM[1]);
+    if (!filePath || !fs.existsSync(filePath)) return next();
+    const buf = fs.readFileSync(filePath);
+    res.setHeader('Content-Type', 'image/png');
+    res.send(buf);
+});
+
 app.use(express.static(path.join(__dirname, '.')));
 
 // ─────────────────────────────────────────────────────────────────────────────
 // EVM / SEPOLIA CONNECTION
 // ─────────────────────────────────────────────────────────────────────────────
-const SEPOLIA_RPC     = process.env.SEPOLIA_RPC_URL || 'https://sepolia.drpc.org';
-const ETHERSCAN_BASE  = 'https://sepolia.etherscan.io';
-const CHAIN_ID        = 11155111; // Sepolia
+const SEPOLIA_RPC    = process.env.SEPOLIA_RPC_URL || 'https://sepolia.drpc.org';
+const ETHERSCAN_BASE = 'https://sepolia.etherscan.io';
+const CHAIN_ID       = 11155111; // Sepolia
 
 const publicClient = createPublicClient({
     chain: sepolia,
@@ -36,21 +52,22 @@ const publicClient = createPublicClient({
 
 // ─────────────────────────────────────────────────────────────────────────────
 const CONFIG = {
-    model:              "meta-llama/llama-3.2-3b-instruct:free",
-    movementCostETH:    '0.00001',   // ETH per step
-    evolutionCostETH:   '0.0005',    // ETH per evolution
-    startingBudgetETH:  '0.003',     // ETH per agent
-    agentCount:         5,           // increased to 5 as requested
+    model:             "meta-llama/llama-3.2-3b-instruct:free",
+    movementCostETH:   '0.00001',
+    evolutionCostETH:  '0.0005',
+    startingBudgetETH: '0.003',
+    agentCount:        5,
     gridW: 20, gridH: 20,
     resourceCount: 80,
     maxLogLines: 80,
-    offlineMode: process.env.USE_OFFLINE_MODE === 'true',
+    maxMissions: 20,
+    missionTTL: 2 * 60 * 60 * 1000, // 2 saat sonra temizle
 };
 
 const STAGE_ORDER = ["Collector", "Merchant", "Producer", "Legend"];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// LOGGER
+// LOGGER (per-mission)
 // ─────────────────────────────────────────────────────────────────────────────
 class Logger {
     constructor() { this.entries = []; }
@@ -61,25 +78,22 @@ class Logger {
     }
 }
 
-const sysLogger = new Logger();
-
 // ─────────────────────────────────────────────────────────────────────────────
 // WORLD
 // ─────────────────────────────────────────────────────────────────────────────
 class World {
-    constructor() {
+    constructor(logger) {
+        this.logger = logger;
         const pk = generatePrivateKey();
-        this.treasuryAccount  = privateKeyToAccount(pk);
-        this.treasuryAddress  = this.treasuryAccount.address;
+        this.treasuryAccount    = privateKeyToAccount(pk);
+        this.treasuryAddress    = this.treasuryAccount.address;
         this.contractBalanceWei = 0n;
         this.resources = [];
         this.spawnResources(CONFIG.resourceCount);
         console.log(`[World] Treasury: ${this.treasuryAddress}`);
     }
 
-    get contractBalance() {
-        return parseFloat(formatEther(this.contractBalanceWei));
-    }
+    get contractBalance() { return parseFloat(formatEther(this.contractBalanceWei)); }
 
     spawnResources(_count) {
         this.resources = [];
@@ -90,7 +104,6 @@ class World {
             { id: 'gold',    weight: 4  },
             { id: 'crystal', weight: 1  }
         ];
-
         for (let i = 0; i < CONFIG.resourceCount; i++) {
             let rnd = Math.random() * 100;
             let current = 0;
@@ -99,7 +112,6 @@ class World {
                 current += k.weight;
                 if (rnd <= current) { selectedKind = k.id; break; }
             }
-
             this.resources.push({
                 x: Math.floor(Math.random() * CONFIG.gridW),
                 y: Math.floor(Math.random() * CONFIG.gridH),
@@ -107,6 +119,7 @@ class World {
             });
         }
     }
+
     resourcesAt(x, y)    { return this.resources.filter(r => r.x === x && r.y === y); }
     popResource(res)      { this.resources = this.resources.filter(r => r !== res); }
     inBounds(x, y)        { return x >= 0 && x < CONFIG.gridW && y >= 0 && y < CONFIG.gridH; }
@@ -117,7 +130,6 @@ class World {
             .slice(0, 6);
     }
 
-    // ── Treasury'yi faucet'a iade et ─────────────────────────────────────────
     async returnTreasuryToFaucet(faucetAddress) {
         const onChain = await publicClient.getBalance({ address: this.treasuryAddress });
         if (onChain === 0n) return;
@@ -139,10 +151,10 @@ class World {
                 value: sendable,
                 gas:   21000n,
             });
-            sysLogger.log(`↩ Treasury: ${formatEther(sendable)} ETH returned to faucet → ${hash.slice(0,14)}...`, "#5a8cff");
+            this.logger.log(`↩ Treasury: ${formatEther(sendable)} ETH returned to faucet → ${hash.slice(0,14)}...`, "#5a8cff");
             this.contractBalanceWei = 0n;
         } catch (err) {
-            sysLogger.log(`⚠️ Treasury refund failed: ${err.message.slice(0, 40)}`, "#ff4b55");
+            this.logger.log(`⚠️ Treasury refund failed: ${err.message.slice(0, 40)}`, "#ff4b55");
         }
     }
 }
@@ -157,10 +169,9 @@ class Agent {
         this.y     = y;
         this.world = world;
 
-        // EVM wallet
-        this.privateKey  = generatePrivateKey();
-        this.account     = privateKeyToAccount(this.privateKey);
-        this.evmAddress  = this.account.address;
+        this.privateKey   = generatePrivateKey();
+        this.account      = privateKeyToAccount(this.privateKey);
+        this.evmAddress   = this.account.address;
         this.walletClient = createWalletClient({
             account:   this.account,
             chain:     sepolia,
@@ -170,13 +181,13 @@ class Agent {
         this.balanceWei = 0n;
         this.isFunded   = false;
 
-        this.stage      = "Collector";
-        this.inventory  = {};
-        this.alive      = true;
-        this.hp         = 100;
-        this.allies     = [];
-        this.message    = "";
-        this.messageTs  = 0;
+        this.stage     = "Collector";
+        this.inventory = {};
+        this.alive     = true;
+        this.hp        = 100;
+        this.allies    = [];
+        this.message   = "";
+        this.messageTs = 0;
 
         this.isThinking = false;
         this.isFallback = false;
@@ -186,35 +197,36 @@ class Agent {
         console.log(`[Agent:${name}] EVM Address: ${this.evmAddress}`);
     }
 
-    get balance() { return parseFloat(formatEther(this.balanceWei)); }
-    get stageLevel() { return STAGE_ORDER.indexOf(this.stage); }
+    get balance()     { return parseFloat(formatEther(this.balanceWei)); }
+    get stageLevel()  { return STAGE_ORDER.indexOf(this.stage); }
+    get logger()      { return this.world.logger; }
+    get faucetPk()    { return this.world.engine?.faucetPk || null; }
 
-    // ── FUNDING (Sepolia faucet wallet veya offline) ─────────────────────────
+    // ── FUNDING ──────────────────────────────────────────────────────────────
     async requestFunding() {
-        const faucetPk = process.env.FAUCET_PRIVATE_KEY;
+        const faucetPk = this.faucetPk;
 
-        // Offline mode (default): skip all RPC calls, simulate balance instantly
-        if (CONFIG.offlineMode || !faucetPk) {
+        if (!faucetPk) {
+            // Faucet key yok — offline (simüle) mod
             this.balanceWei = parseEther(CONFIG.startingBudgetETH);
             this.isFunded   = false;
-            sysLogger.log(`💰 ${this.name}: ${CONFIG.startingBudgetETH} ETH simulated (offline mode)`, "#00e5c8");
+            this.logger.log(`💰 ${this.name}: ${CONFIG.startingBudgetETH} ETH simulated (offline mode)`, "#00e5c8");
             return false;
         }
 
         try {
-            // Quick balance check — skip if faucet is too low
             const faucetAccount = privateKeyToAccount(faucetPk);
             const faucetBal     = await publicClient.getBalance({ address: faucetAccount.address });
             const needed        = parseEther(CONFIG.startingBudgetETH);
             if (faucetBal < needed) {
-                sysLogger.log(`⚠️ ${this.name}: Faucet balance too low — offline mode`, "#ff8c42");
+                this.logger.log(`⚠️ ${this.name}: Faucet balance too low (${formatEther(faucetBal)} ETH) — offline mode`, "#ff8c42");
                 this.balanceWei = needed;
                 this.isFunded   = false;
                 return false;
             }
 
-            sysLogger.log(`💧 ${this.name}: Transferring ${CONFIG.startingBudgetETH} ETH from Sepolia faucet...`, "#5a8cff");
-            const faucetClient  = createWalletClient({
+            this.logger.log(`💧 ${this.name}: Transferring ${CONFIG.startingBudgetETH} ETH from Sepolia faucet...`, "#5a8cff");
+            const faucetClient = createWalletClient({
                 account:   faucetAccount,
                 chain:     sepolia,
                 transport: http(SEPOLIA_RPC),
@@ -225,31 +237,28 @@ class Agent {
                 value: needed,
             });
 
-            await publicClient.waitForTransactionReceipt({ hash, timeout: 15_000 });
+            await publicClient.waitForTransactionReceipt({ hash, timeout: 30_000 });
             this.balanceWei = await publicClient.getBalance({ address: this.evmAddress });
             this.isFunded   = true;
-            sysLogger.log(`✅ ${this.name}: ${CONFIG.startingBudgetETH} ETH received! Address: ${this.evmAddress.slice(0, 10)}...`, "#4bd77d");
+            this.logger.log(`✅ ${this.name}: ${CONFIG.startingBudgetETH} ETH received! ${this.evmAddress.slice(0,10)}...`, "#4bd77d");
             return true;
         } catch (err) {
-            sysLogger.log(`⚠️ ${this.name}: Funding failed (${err.message.slice(0, 40)}) — offline mode`, "#ff4b55");
+            this.logger.log(`⚠️ ${this.name}: Funding failed (${err.message.slice(0, 40)}) — offline mode`, "#ff4b55");
             this.balanceWei = parseEther(CONFIG.startingBudgetETH);
             this.isFunded   = false;
             return false;
         }
     }
 
-    // ── x402 PAYMENT FLOW ────────────────────────────────────────────────────
-    // x402 HTTP protocol: agent signs an ETH transfer → server broadcasts it.
-    // X-PAYMENT header payload = base64(JSON { signedTx, from, to, value })
+    // ── x402 PAYMENT ─────────────────────────────────────────────────────────
     async buildX402PaymentHeader(costWei) {
-        const request = await this.walletClient.prepareTransactionRequest({
+        const request  = await this.walletClient.prepareTransactionRequest({
             to:    this.world.treasuryAddress,
             value: costWei,
             gas:   21000n,
         });
         const signedTx = await this.walletClient.signTransaction(request);
-
-        const payload = JSON.stringify({
+        const payload  = JSON.stringify({
             x402Version: 1,
             scheme:      'exact-eth',
             network:     `eip155:${CHAIN_ID}`,
@@ -261,44 +270,26 @@ class Agent {
         return Buffer.from(payload).toString('base64');
     }
 
-    // x402 settlement: broadcast the pre-signed transaction from X-PAYMENT
     async settleX402Payment(paymentHeader) {
         const raw     = Buffer.from(paymentHeader, 'base64').toString('utf8');
         const payload = JSON.parse(raw);
-
-        // Verify recipient and value
-        if (payload.to.toLowerCase() !== this.world.treasuryAddress.toLowerCase()) {
-            throw new Error('x402: wrong recipient');
-        }
-        if (BigInt(payload.value) < parseEther(CONFIG.movementCostETH) / 2n) {
-            throw new Error('x402: insufficient amount');
-        }
-
-        // Broadcast (settle)
-        const txHash = await publicClient.sendRawTransaction({
-            serializedTransaction: payload.signedTx,
-        });
-
-        return txHash;
+        if (payload.to.toLowerCase() !== this.world.treasuryAddress.toLowerCase()) throw new Error('x402: wrong recipient');
+        if (BigInt(payload.value) < parseEther(CONFIG.movementCostETH) / 2n) throw new Error('x402: insufficient amount');
+        return await publicClient.sendRawTransaction({ serializedTransaction: payload.signedTx });
     }
 
-    // ── PAY ACTION ───────────────────────────────────────────────────────────
     async payAction(costWei) {
         if (this.isFunded) {
             try {
-                // Build x402 payment header and settle on-chain
                 const paymentHeader = await this.buildX402PaymentHeader(costWei);
                 const txHash        = await this.settleX402Payment(paymentHeader);
-
-                this.lastTxHash = txHash;
-                sysLogger.log(`🔗 x402 Tx: ${txHash.slice(0, 14)}... ↗`, "#4a6078");
-
-                // Sync balance from chain
+                this.lastTxHash     = txHash;
+                this.logger.log(`🔗 x402 Tx: ${txHash.slice(0, 14)}... ↗`, "#4a6078");
                 this.balanceWei = await publicClient.getBalance({ address: this.evmAddress });
                 this.world.contractBalanceWei += costWei;
                 return txHash;
             } catch (err) {
-                sysLogger.log(`⚠️ On-chain tx failed — offline: ${err.message.slice(0, 35)}`, "#ff4b55");
+                this.logger.log(`⚠️ On-chain tx failed — offline: ${err.message.slice(0, 35)}`, "#ff4b55");
                 this._offlineDeduct(costWei);
                 return null;
             }
@@ -322,7 +313,7 @@ class Agent {
 
         const nearbyAgents = allAgents
             .filter(a => a.name !== this.name && a.alive && Math.abs(a.x - this.x) <= 3 && Math.abs(a.y - this.y) <= 3)
-            .map(a => ({name: a.name, pos: `(${a.x},${a.y})`, stage: a.stage, hp: a.hp, isAlly: this.allies.includes(a.name), said: a.message || ""}));
+            .map(a => ({ name: a.name, pos: `(${a.x},${a.y})`, stage: a.stage, hp: a.hp, isAlly: this.allies.includes(a.name), said: a.message || "" }));
 
         const prompt = `You are AI agent ${this.name} trying to survive on the Sepolia EVM network.
 Status: Pos: (${this.x}, ${this.y}), Balance: ${this.balance.toFixed(6)} ETH, Stage: ${this.stage}, HP: ${this.hp}, Inventory: ${JSON.stringify(this.inventory)}, Allies: ${this.allies.join(",")}
@@ -345,7 +336,7 @@ Rules:
                     "Content-Type":  "application/json",
                 },
                 body: JSON.stringify({
-                    model:       CONFIG.model,
+                    model:    CONFIG.model,
                     messages: [
                         { role: "system", content: "Return only valid JSON." },
                         { role: "user",   content: prompt },
@@ -367,22 +358,12 @@ Rules:
     }
 
     _fallbackAction(reason) {
-        const moveMessages = [
-            "Exploring...", "Searching for resources!", "Moving out!",
-            "Scouting the area...", "On patrol!", "No signal, going manual",
-            "Autonomous mode active", "Grid scanning...", "Resource hunt!",
-            "Where are the others?", "Need more wood...", "Staying alive!",
-        ];
+        const msgs = ["Exploring...", "Searching for resources!", "Moving out!", "Scouting the area...", "No signal, going manual", "Grid scanning...", "Resource hunt!"];
         if (this.balance >= parseFloat(CONFIG.evolutionCostETH) && this.stage !== "Legend") {
             return { action: "evolve", _fallback: reason, message: "Evolving! ★" };
         }
         const dirs = ["up", "down", "left", "right"];
-        return {
-            action: "move",
-            direction: dirs[Math.floor(Math.random() * dirs.length)],
-            _fallback: reason,
-            message: moveMessages[Math.floor(Math.random() * moveMessages.length)],
-        };
+        return { action: "move", direction: dirs[Math.floor(Math.random() * dirs.length)], _fallback: reason, message: msgs[Math.floor(Math.random() * msgs.length)] };
     }
 
     // ── EXECUTE ──────────────────────────────────────────────────────────────
@@ -394,7 +375,7 @@ Rules:
         const isFallback = !!action._fallback;
         this.isFallback  = isFallback;
         const prefix     = isFallback ? `🤖[FB: ${action._fallback.substring(0,20)}] ` : "";
-        
+
         if (act === "move")    return this._doMove(action.direction || "up", prefix, isFallback);
         if (act === "evolve")  return this._doEvolve(prefix, isFallback);
         if (act === "collect") return this._doCollect(prefix);
@@ -402,16 +383,16 @@ Rules:
         if (act === "attack")  return this._doAttack(target, prefix);
         if (act === "ally")    return this._doAlly(target, prefix);
         if (act === "mate")    return this._doMate(target, prefix);
-        
+
         this.lastAction = "Waited";
         return [`${this.name}: Waited.`, "#5a697d"];
     }
 
     async _doMove(direction, prefix, isFallback = false) {
-        const deltas = { up: [0,-1], down: [0,1], left: [-1,0], right: [1,0] };
+        const deltas   = { up: [0,-1], down: [0,1], left: [-1,0], right: [1,0] };
         const [dx, dy] = deltas[direction] || [0, 0];
         const nx = this.x + dx, ny = this.y + dy;
-        const dirIco  = { up:"↑", down:"↓", left:"←", right:"→" }[direction] || direction;
+        const dirIco   = { up:"↑", down:"↓", left:"←", right:"→" }[direction] || direction;
         const logColor = isFallback ? "#ff8c42" : "#c3d2e6";
 
         if (!this.world.inBounds(nx, ny)) return [`${this.name}: Out of bounds!`, "#5a697d"];
@@ -424,7 +405,6 @@ Rules:
         }
 
         await this.payAction(costWei);
-
         this.x = nx; this.y = ny;
         this.lastAction = `${dirIco} ${direction}`;
         return [`${prefix}${this.name}: ${dirIco} moved. (${this.balance.toFixed(6)} ETH)`, logColor];
@@ -441,21 +421,17 @@ Rules:
             else if (idx === 1) { reqWood = 10; reqStone = 6; reqGold = 1; }
             else if (idx === 2) { reqWood = 15; reqStone = 10; reqGold = 3; reqCrystal = 1; }
 
-            const o = this.inventory['wood']    || 0;
-            const t = this.inventory['stone']   || 0;
-            const a = this.inventory['gold']    || 0;
-            const e = this.inventory['crystal'] || 0;
-
-            if (o < reqWood || t < reqStone || a < reqGold || e < reqCrystal) {
+            if ((this.inventory['wood']    || 0) < reqWood  ||
+                (this.inventory['stone']   || 0) < reqStone ||
+                (this.inventory['gold']    || 0) < reqGold  ||
+                (this.inventory['crystal'] || 0) < reqCrystal) {
                 this.lastAction = "Missing Resources";
-                return [`${prefix}${this.name}: Not enough resources! (Need: ${reqWood} Wood, ${reqStone} Stone, ${reqGold} Gold, ${reqCrystal} Crystal)`, "#ff4b55"];
+                return [`${prefix}${this.name}: Not enough resources to evolve!`, "#ff4b55"];
             }
         }
 
         const costWei = parseEther(CONFIG.evolutionCostETH);
-        if (this.balanceWei < costWei) {
-            return [`${this.name}: Not enough ETH to evolve! (${this.balance.toFixed(6)} ETH)`, "#ff4b55"];
-        }
+        if (this.balanceWei < costWei) return [`${this.name}: Not enough ETH to evolve!`, "#ff4b55"];
 
         await this.payAction(costWei);
 
@@ -464,25 +440,21 @@ Rules:
             if (idx === 0) { reqWood = 5; reqStone = 3; }
             else if (idx === 1) { reqWood = 10; reqStone = 6; reqGold = 1; }
             else if (idx === 2) { reqWood = 15; reqStone = 10; reqGold = 3; reqCrystal = 1; }
-
-            this.inventory['wood']    -= reqWood;
-            this.inventory['stone']   -= reqStone;
-            if (reqGold    > 0) this.inventory['gold']    -= reqGold;
-            if (reqCrystal > 0) this.inventory['crystal'] -= reqCrystal;
+            this.inventory['wood']    = (this.inventory['wood']    || 0) - reqWood;
+            this.inventory['stone']   = (this.inventory['stone']   || 0) - reqStone;
+            if (reqGold    > 0) this.inventory['gold']    = (this.inventory['gold']    || 0) - reqGold;
+            if (reqCrystal > 0) this.inventory['crystal'] = (this.inventory['crystal'] || 0) - reqCrystal;
         }
 
-        const oldStage = this.stage;
-        this.stage     = STAGE_ORDER[idx + 1];
+        const oldStage  = this.stage;
+        this.stage      = STAGE_ORDER[idx + 1];
         this.lastAction = "EVOLVED";
         return [`★ ${prefix}${this.name}: ${oldStage} → ${this.stage}! (${this.balance.toFixed(6)} ETH)`, logColor];
     }
 
     async _doCollect(prefix) {
         const here = this.world.resourcesAt(this.x, this.y);
-        if (here.length === 0) {
-            this.lastAction = "No Resources";
-            return [`${this.name}: No resources here.`, "#5a697d"];
-        }
+        if (here.length === 0) { this.lastAction = "No Resources"; return [`${this.name}: No resources here.`, "#5a697d"]; }
         const res = here[0];
         this.inventory[res.kind] = (this.inventory[res.kind] || 0) + 1;
         this.world.popResource(res);
@@ -504,19 +476,13 @@ Rules:
         const allAgents = this.world.engine?.agents || [];
         const t = allAgents.find(a => a.name === targetName && a.alive);
         if (!t) return [`${prefix}${this.name}: Target '${targetName}' not found.`, "#5a697d"];
-        if (Math.abs(t.x - this.x) > 2 || Math.abs(t.y - this.y) > 2) return [`${prefix}${this.name}: '${targetName}' is out of attack range.`, "#5a697d"];
-
+        if (Math.abs(t.x - this.x) > 2 || Math.abs(t.y - this.y) > 2) return [`${prefix}${this.name}: '${targetName}' out of range.`, "#5a697d"];
         const dmg = 25;
         t.hp -= dmg;
         this.lastAction = `Attacked: ${t.name}`;
         if (t.hp <= 0) {
-            t.hp = 0;
-            t.alive = false;
-            t.lastAction = "KILLED";
-            for (let k in t.inventory) {
-                this.inventory[k] = (this.inventory[k] || 0) + t.inventory[k];
-                t.inventory[k] = 0;
-            }
+            t.hp = 0; t.alive = false; t.lastAction = "KILLED";
+            for (let k in t.inventory) { this.inventory[k] = (this.inventory[k] || 0) + t.inventory[k]; t.inventory[k] = 0; }
             return [`⚔️ ${prefix}${this.name} KILLED ${t.name} and looted their inventory!`, "#ff4b55"];
         }
         return [`⚔️ ${prefix}${this.name} dealt ${dmg} damage to ${t.name}!`, "#ff8c42"];
@@ -526,7 +492,6 @@ Rules:
         const allAgents = this.world.engine?.agents || [];
         const t = allAgents.find(a => a.name === targetName && a.alive);
         if (!t) return [`${prefix}${this.name}: Ally target '${targetName}' not found.`, "#5a697d"];
-
         if (!this.allies.includes(t.name)) this.allies.push(t.name);
         this.lastAction = `Allied: ${t.name}`;
         return [`🤝 ${prefix}${this.name} formed an alliance with ${t.name}.`, "#5a8cff"];
@@ -536,93 +501,89 @@ Rules:
         const allAgents = this.world.engine?.agents || [];
         const t = allAgents.find(a => a.name === targetName && a.alive);
         if (!t) return [`${prefix}${this.name}: Mate target '${targetName}' not found.`, "#5a697d"];
-        if (Math.abs(t.x - this.x) > 1 || Math.abs(t.y - this.y) > 1) return [`${prefix}${this.name}: '${targetName}' is not adjacent!`, "#5a697d"];
+        if (Math.abs(t.x - this.x) > 1 || Math.abs(t.y - this.y) > 1) return [`${prefix}${this.name}: '${targetName}' not adjacent!`, "#5a697d"];
 
         const costWei = parseEther("0.001");
         if (this.balanceWei < costWei) return [`${prefix}${this.name}: Not enough ETH to mate!`, "#ff4b55"];
 
         await this.payAction(costWei);
-
         const childName = "C_" + this.name.slice(0,3) + "_" + Math.floor(Math.random()*1000);
         const child = new Agent(childName, this.x, this.y, this.world);
         if (this.world.engine) {
             this.world.engine.agents.push(child);
             child.requestFunding();
         }
-
         this.lastAction = `Spawned: ${childName}`;
         return [`👶 ${prefix}${this.name} and ${t.name} mated — ${childName} was born!`, "#ffb800"];
     }
 
-    // ── REFUND: return remaining balance to faucet ───────────────────────────
     async returnToFaucet(faucetAddress) {
-        if (!this.isFunded) return; // offline mode — balance is simulated
-
-        // Read current on-chain balance
+        if (!this.isFunded) return;
         this.balanceWei = await publicClient.getBalance({ address: this.evmAddress });
         if (this.balanceWei === 0n) return;
-
-        // Gas cost: 21000 gas × current baseFee (with margin)
         const feeData  = await publicClient.estimateFeesPerGas();
         const gasCost  = 21000n * (feeData.maxFeePerGas + feeData.maxPriorityFeePerGas);
         const sendable = this.balanceWei - gasCost;
         if (sendable <= 0n) return;
-
         try {
-            const hash = await this.walletClient.sendTransaction({
-                to:    faucetAddress,
-                value: sendable,
-                gas:   21000n,
-            });
-            sysLogger.log(`↩ ${this.name}: ${formatEther(sendable)} ETH returned to faucet → ${hash.slice(0,14)}...`, "#5a8cff");
+            const hash = await this.walletClient.sendTransaction({ to: faucetAddress, value: sendable, gas: 21000n });
+            this.logger.log(`↩ ${this.name}: ${formatEther(sendable)} ETH returned → ${hash.slice(0,14)}...`, "#5a8cff");
             this.lastTxHash = hash;
             this.balanceWei = 0n;
         } catch (err) {
-            sysLogger.log(`⚠️ ${this.name} refund failed: ${err.message.slice(0, 40)}`, "#ff4b55");
+            this.logger.log(`⚠️ ${this.name} refund failed: ${err.message.slice(0, 40)}`, "#ff4b55");
         }
     }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GAME ENGINE
+// GAME ENGINE (per-mission)
 // ─────────────────────────────────────────────────────────────────────────────
 class GameEngine {
-    constructor() {
-        this.world   = new World();
+    constructor({ faucetPk = null, apiKey = "", agentCount = CONFIG.agentCount } = {}) {
+        this.logger    = new Logger();
+        this.faucetPk  = faucetPk;
+        this.apiKey    = apiKey;
+        this.world     = new World(this.logger);
         this.world.engine = this;
-        this.agents  = [];
-        this.agents.push(new Agent("evo", Math.floor(Math.random()*CONFIG.gridW), Math.floor(Math.random()*CONFIG.gridH), this.world));
-        for (let i = 2; i <= CONFIG.agentCount; i++) {
-            this.agents.push(new Agent("Agent " + i, Math.floor(Math.random()*CONFIG.gridW), Math.floor(Math.random()*CONFIG.gridH), this.world));
+        this.agents    = [];
+        this.running   = false;
+        this.starting  = false;
+        this.turnIdx   = 0;
+        this.endedAt   = null;
+
+        for (let i = 0; i < agentCount; i++) {
+            const name = i === 0 ? "evo" : `Agent ${i + 1}`;
+            this.agents.push(new Agent(name, Math.floor(Math.random()*CONFIG.gridW), Math.floor(Math.random()*CONFIG.gridH), this.world));
         }
-        this.running  = false;
-        this.starting = false;
-        this.turnIdx  = 0;
-        this.apiKey   = "";
+    }
+
+    applyAgentNames(names) {
+        if (!Array.isArray(names)) return;
+        names.forEach((n, i) => { if (n && this.agents[i]) this.agents[i].name = n; });
     }
 
     async start(apiKey, agentNames) {
         if (this.running || this.starting) return;
-        this.apiKey   = apiKey;
+        if (apiKey) this.apiKey = apiKey;
         this.starting = true;
 
-        // Apply custom agent names if provided
-        if (Array.isArray(agentNames)) {
-            agentNames.forEach((n, i) => {
-                if (n && this.agents[i]) this.agents[i].name = n;
-            });
+        this.applyAgentNames(agentNames);
+        this.logger.log("🚀 EVOLU-A starting — preparing Sepolia EVM wallets...", "#00e5c8");
+
+        if (this.faucetPk) {
+            this.logger.log("🔑 Faucet private key present — attempting real Sepolia ETH transfers...", "#5a8cff");
+        } else {
+            this.logger.log("⚠️ No faucet key — running in offline (simulated balance) mode.", "#ff8c42");
         }
 
-        sysLogger.log("🚀 EVOLU-A starting — preparing Sepolia EVM wallets...", "#00e5c8");
-
-        // Fund all agents in parallel
         await Promise.all(this.agents.map(a => a.requestFunding()));
 
         const allOffline = this.agents.every(a => !a.isFunded);
-        if (allOffline) {
-            sysLogger.log("⚠️ No Sepolia connection — running in Offline (simulated) mode.", "#ff8c42");
-        } else {
-            sysLogger.log(`✅ Sepolia aktif! Treasury: ${this.world.treasuryAddress}`, "#4bd77d");
+        if (allOffline && this.faucetPk) {
+            this.logger.log("⚠️ All funding failed — running offline despite faucet key.", "#ff8c42");
+        } else if (!allOffline) {
+            this.logger.log(`✅ Sepolia live! Treasury: ${this.world.treasuryAddress}`, "#4bd77d");
         }
 
         this.running  = true;
@@ -636,55 +597,49 @@ class GameEngine {
 
         if (agent.alive) {
             agent.isThinking = true;
-            await new Promise(r => setTimeout(r, 100)); // minimized for Serverless
-
-            const decision = await agent.getLLMDecision(this.agents, this.apiKey);
+            await new Promise(r => setTimeout(r, 100));
+            const decision  = await agent.getLLMDecision(this.agents, this.apiKey);
             agent.isThinking = false;
-
             const [logMsg, color] = await agent.execute(decision);
-            sysLogger.log(logMsg, color);
+            this.logger.log(logMsg, color);
         }
 
-        await new Promise(r => setTimeout(r, 800)); // reverted to prevent Vercel timeouts
+        await new Promise(r => setTimeout(r, 800));
         this.turnIdx = (this.turnIdx + 1) % this.agents.length;
 
         if (!this.agents.some(a => a.alive)) {
-            sysLogger.log("☠️ All agents died! Game over.", "#ff4b55");
+            this.logger.log("☠️ All agents died! Game over.", "#ff4b55");
             this.running = false;
-            this._returnFundsToFaucet(); // async, non-blocking
+            this.endedAt = Date.now();
+            this._returnFundsToFaucet();
             return;
         }
         if (this.running) this.runTurn();
     }
 
     async _returnFundsToFaucet() {
-        const faucetPk = process.env.FAUCET_PRIVATE_KEY;
-        if (!faucetPk) return; // offline modda iade gerekmiyor
-
-        const faucetAddress = privateKeyToAccount(faucetPk).address;
+        if (!this.faucetPk) return;
+        const faucetAddress = privateKeyToAccount(this.faucetPk).address;
         const anyFunded     = this.agents.some(a => a.isFunded);
         if (!anyFunded) return;
 
-        sysLogger.log("💸 Game over — returning balances to faucet...", "#5a8cff");
-
-        // Agent bakiyeleri + treasury'yi paralel iade et
+        this.logger.log("💸 Game over — returning balances to faucet...", "#5a8cff");
         await Promise.all([
             ...this.agents.map(a => a.returnToFaucet(faucetAddress)),
             this.world.returnTreasuryToFaucet(faucetAddress),
         ]);
-
-        sysLogger.log(`✅ Refund complete → ${faucetAddress.slice(0, 10)}...`, "#4bd77d");
+        this.logger.log(`✅ Refund complete → ${faucetAddress.slice(0, 10)}...`, "#4bd77d");
     }
 
     getState() {
         return {
             world: {
-                resources:        this.world.resources,
-                contractBalance:  this.world.contractBalance,
-                treasuryAddress:  this.world.treasuryAddress,
-                network:          'sepolia',
-                chainId:          CHAIN_ID,
-                explorerBase:     ETHERSCAN_BASE,
+                resources:       this.world.resources,
+                contractBalance: this.world.contractBalance,
+                treasuryAddress: this.world.treasuryAddress,
+                network:         'sepolia',
+                chainId:         CHAIN_ID,
+                explorerBase:    ETHERSCAN_BASE,
             },
             agents: this.agents.map(a => ({
                 name:        a.name,
@@ -704,178 +659,423 @@ class GameEngine {
                 isThinking:  a.isThinking,
                 lastAction:  a.lastAction,
             })),
-            logs:     sysLogger.entries,
-            running:  this.running,
-            starting: this.starting,
+            logs:           this.logger.entries,
+            running:        this.running,
+            starting:       this.starting,
             isFallbackMode: !this.apiKey,
+            isOnChain:      this.agents.some(a => a.isFunded),
         };
+    }
+
+    stop() {
+        this.running  = false;
+        this.starting = false;
+        this.endedAt  = Date.now();
     }
 }
 
-const engine = new GameEngine();
+// ─────────────────────────────────────────────────────────────────────────────
+// MISSIONS MAP
+// ─────────────────────────────────────────────────────────────────────────────
+const missions = new Map(); // missionId → { id, name, createdBy, createdAt, engine }
+
+function genId() {
+    return Math.random().toString(36).slice(2, 8).toUpperCase();
+}
+
+function cleanupOldMissions() {
+    const now = Date.now();
+    for (const [id, m] of missions.entries()) {
+        const ended  = !m.engine.running && !m.engine.starting && m.engine.endedAt;
+        const stale  = ended && (now - m.engine.endedAt > CONFIG.missionTTL);
+        if (stale) {
+            console.log(`[Missions] Cleaning up stale mission: ${id}`);
+            missions.delete(id);
+        }
+    }
+    // Max kapasite aşıldıysa en eskiyi sil
+    if (missions.size > CONFIG.maxMissions) {
+        const oldest = [...missions.entries()].sort((a, b) => a[1].createdAt - b[1].createdAt)[0];
+        if (oldest) {
+            oldest[1].engine.stop();
+            missions.delete(oldest[0]);
+        }
+    }
+}
+
+setInterval(cleanupOldMissions, 5 * 60 * 1000); // her 5 dakikada bir temizle
 
 // ─────────────────────────────────────────────────────────────────────────────
-// API ROUTES
+// API ROUTES — MISSIONS
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ── x402 Payment Gate (/action) ───────────────────────────────────────────────
-// External tools can use this endpoint to make payments via the x402 protocol.
-// The game engine calls internal functions directly.
-app.post('/api/action', (req, res) => {
-    const paymentHeader = req.headers['x-payment'];
+// Tüm mission'ları listele (Lobby)
+app.get('/api/missions', (_req, res) => {
+    cleanupOldMissions();
+    const list = [...missions.entries()].map(([id, m]) => {
+        const s = m.engine.getState();
+        return {
+            id,
+            name:        m.name,
+            createdBy:   m.createdBy,
+            createdAt:   m.createdAt,
+            running:     s.running,
+            starting:    s.starting,
+            turnCount:   m.engine.turnIdx,
+            aliveAgents: s.agents.filter(a => a.alive).length,
+            totalAgents: s.agents.length,
+            isOnChain:   s.isOnChain,
+            isFallbackMode: s.isFallbackMode,
+            contractBalance: s.world.contractBalance,
+        };
+    }).sort((a, b) => b.createdAt - a.createdAt);
 
-    if (!paymentHeader) {
-        // HTTP 402 — x402 Payment Required
-        return res.status(402).json({
-            x402Version: 1,
-            accepts: [{
-                scheme:             'exact-eth',
-                network:            `eip155:${CHAIN_ID}`,
-                maxAmountRequired:  parseEther(CONFIG.movementCostETH).toString(),
-                resource:           `${req.protocol}://${req.get('host')}${req.path}`,
-                description:        'EVOLU-A agent action fee (x402 protocol)',
-                mimeType:           'application/json',
-                payTo:              engine.world.treasuryAddress,
-                maxTimeoutSeconds:  300,
-                asset:              'ETH',
-                extra: {
-                    note:    'Powered by x402 + Sepolia',
-                    project: 'EVOLU-A',
-                },
-            }],
-        });
-    }
-
-    // X-PAYMENT header mevcut — verify & respond
-    try {
-        const raw     = Buffer.from(paymentHeader, 'base64').toString('utf8');
-        const payload = JSON.parse(raw);
-
-        if (payload.to?.toLowerCase() !== engine.world.treasuryAddress.toLowerCase()) {
-            return res.status(400).json({ error: 'x402: wrong payment recipient' });
-        }
-
-        // Settlement happens on-chain (fire and forget for external callers)
-        if (payload.signedTx) {
-            publicClient.sendRawTransaction({ serializedTransaction: payload.signedTx })
-                .then(hash => sysLogger.log(`🔗 External x402 Tx: ${hash.slice(0,14)}...`, "#4a6078"))
-                .catch(() => {});
-        }
-
-        res.set('X-PAYMENT-RESPONSE', Buffer.from(JSON.stringify({
-            success: true, network: 'sepolia', treasury: engine.world.treasuryAddress,
-        })).toString('base64'));
-
-        return res.json({ ok: true, message: 'Payment received via x402' });
-    } catch (err) {
-        return res.status(400).json({ error: 'x402: invalid payment header' });
-    }
+    res.json(list);
 });
+
+// Yeni mission oluştur
+app.post('/api/missions', (req, res) => {
+    cleanupOldMissions();
+
+    if (missions.size >= CONFIG.maxMissions) {
+        return res.status(503).json({ error: 'Max concurrent missions reached. Try again later.' });
+    }
+
+    const { name, createdBy, apiKey, model, faucetPrivateKey, walletId, agentNames, agentCount } = req.body;
+
+    if (!name || name.trim().length < 1) {
+        return res.status(400).json({ error: 'Mission name is required' });
+    }
+
+    // walletId varsa registry'den PK al, yoksa faucetPrivateKey'e bak (legacy), yoksa offline
+    let faucetPkResolved = null;
+    if (walletId) {
+        const w = walletRegistry.get(walletId);
+        if (w) faucetPkResolved = w.pk;
+        else return res.status(400).json({ error: 'Wallet not found or expired. Create a new one.' });
+    } else if (faucetPrivateKey?.trim()) {
+        faucetPkResolved = faucetPrivateKey.trim();
+    }
+
+    const id     = genId();
+    const engine = new GameEngine({
+        faucetPk:   faucetPkResolved,
+        apiKey:     apiKey?.trim() || "",
+        agentCount: Math.min(Math.max(parseInt(agentCount) || CONFIG.agentCount, 1), 10),
+    });
+
+    if (model) CONFIG.model = model;
+
+    missions.set(id, {
+        id,
+        name:      name.trim().slice(0, 40),
+        createdBy: (createdBy || 'Anonymous').trim().slice(0, 20),
+        createdAt: Date.now(),
+        engine,
+    });
+
+    console.log(`[Missions] Created: ${id} "${name}" by ${createdBy || 'Anonymous'}`);
+
+    res.json({
+        id,
+        name:     missions.get(id).name,
+        watchUrl: `/game.html?mission=${id}`,
+    });
+});
+
+// Mission başlat
+app.post('/api/missions/:id/start', async (req, res) => {
+    const m = missions.get(req.params.id);
+    if (!m) return res.status(404).json({ error: 'Mission not found' });
+
+    const { apiKey, model, agentNames } = req.body;
+    if (model) CONFIG.model = model;
+
+    m.engine.start(apiKey || m.engine.apiKey, agentNames);
+    res.json({ status: "starting", missionId: m.id, model: CONFIG.model, network: 'sepolia', chainId: CHAIN_ID });
+});
+
+// Mission state'i al
+app.get('/api/missions/:id/state', (req, res) => {
+    const m = missions.get(req.params.id);
+    if (!m) return res.status(404).json({ error: 'Mission not found' });
+    res.json({ ...m.engine.getState(), missionId: m.id, missionName: m.name, createdBy: m.createdBy });
+});
+
+// API key güncelle
+app.post('/api/missions/:id/setkey', (req, res) => {
+    const m = missions.get(req.params.id);
+    if (!m) return res.status(404).json({ error: 'Mission not found' });
+    const { apiKey } = req.body || {};
+    if (!apiKey || apiKey.trim().length < 5) return res.status(400).json({ error: 'Invalid API key' });
+    m.engine.apiKey = apiKey.trim();
+    m.engine.logger.log(`🔑 API key updated — LLM mode active!`, '#4bd77d');
+    res.json({ ok: true });
+});
+
+// Mission reset
+app.post('/api/missions/:id/reset', async (req, res) => {
+    const m = missions.get(req.params.id);
+    if (!m) return res.status(404).json({ error: 'Mission not found' });
+
+    const { apiKey } = req.body || {};
+    m.engine.stop();
+    m.engine._returnFundsToFaucet().catch(err => console.error("Reset refund error:", err));
+
+    const newEngine = new GameEngine({
+        faucetPk:   m.engine.faucetPk,
+        apiKey:     apiKey || m.engine.apiKey,
+        agentCount: m.engine.agents.length,
+    });
+    m.engine = newEngine;
+    m.engine.logger.log("♻️ Mission reset — agents respawned.", "#00e5c8");
+    m.engine.start(m.engine.apiKey, null);
+
+    res.json({ status: "reset", missionId: m.id });
+});
+
+// Mission durdur
+app.post('/api/missions/:id/stop', (req, res) => {
+    const m = missions.get(req.params.id);
+    if (!m) return res.status(404).json({ error: 'Mission not found' });
+    m.engine.stop();
+    m.engine.logger.log("⏹️ Mission stopped by user.", "#ff8c42");
+    res.json({ ok: true });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LEGACY ROUTES (tek engine — geriye dönük uyumluluk için, ilk aktif mission'a yönlendirir)
+// ─────────────────────────────────────────────────────────────────────────────
+function getFirstActiveMission() {
+    for (const m of missions.values()) {
+        if (m.engine.running || m.engine.starting) return m;
+    }
+    return missions.values().next().value || null;
+}
 
 app.post('/api/start', async (req, res) => {
     const { apiKey, model, agentNames } = req.body;
     if (model) CONFIG.model = model;
-    engine.start(apiKey, agentNames); // async, non-blocking
-    res.json({ status: "starting", model: CONFIG.model, network: 'sepolia', chainId: CHAIN_ID });
+
+    // Eski bağlantılar için: var olan ilk aktif mission'ı başlat, yoksa yeni oluştur
+    let m = getFirstActiveMission();
+    if (!m) {
+        const id     = genId();
+        const engine = new GameEngine({ apiKey: apiKey?.trim() || "", agentCount: CONFIG.agentCount });
+        missions.set(id, { id, name: 'Default', createdBy: 'system', createdAt: Date.now(), engine });
+        m = missions.get(id);
+    }
+
+    m.engine.start(apiKey, agentNames);
+    res.json({ status: "starting", missionId: m.id, model: CONFIG.model, network: 'sepolia', chainId: CHAIN_ID });
 });
 
 app.get('/api/state', (_req, res) => {
-    res.json(engine.getState());
+    const m = getFirstActiveMission();
+    if (!m) return res.json({ running: false, starting: false, agents: [], logs: [], world: { resources: [], contractBalance: 0 } });
+    res.json({ ...m.engine.getState(), missionId: m.id });
 });
 
-// ── Set API key at any time (switch from fallback → LLM mode) ────────────────
 app.post('/api/setkey', (req, res) => {
+    const m = getFirstActiveMission();
+    if (!m) return res.status(404).json({ error: 'No active mission' });
     const { apiKey } = req.body || {};
-    if (!apiKey || apiKey.trim().length < 5) {
-        return res.status(400).json({ error: 'Invalid API key' });
-    }
-    engine.apiKey = apiKey.trim();
-    sysLogger.log(`🔑 API key updated — LLM mode active!`, '#4bd77d');
+    if (!apiKey || apiKey.trim().length < 5) return res.status(400).json({ error: 'Invalid API key' });
+    m.engine.apiKey = apiKey.trim();
+    m.engine.logger.log(`🔑 API key updated — LLM mode active!`, '#4bd77d');
     res.json({ ok: true });
 });
 
 app.post('/api/reset', async (req, res) => {
+    const m = getFirstActiveMission();
+    if (!m) return res.status(404).json({ error: 'No active mission' });
     const { apiKey } = req.body || {};
-    if (apiKey) engine.apiKey = apiKey;
-    
-    // Return old agent and treasury balances in the background
-    const oldContext = { agents: [...engine.agents], world: engine.world };
-    engine._returnFundsToFaucet.call(oldContext).catch(err => console.error("Reset refund var", err));
-
-    // Full simulation restart — recreate world, agents, and re-run
-    engine.running  = false;
-    engine.starting = false;
-    engine.world    = new World();
-    engine.world.engine = engine;
-    engine.agents   = [];
-    engine.agents.push(new Agent("evo", Math.floor(Math.random()*CONFIG.gridW), Math.floor(Math.random()*CONFIG.gridH), engine.world));
-    for (let i = 2; i <= CONFIG.agentCount; i++) {
-        engine.agents.push(new Agent("Agent " + i, Math.floor(Math.random()*CONFIG.gridW), Math.floor(Math.random()*CONFIG.gridH), engine.world));
-    }
-    engine.turnIdx  = 0;
-    sysLogger.log("♻️ Simulation reset — agents respawned.", "#00e5c8");
-
-    // Re-start the engine asynchronously using the saved apiKey
-    engine.start(engine.apiKey, null);
-
+    m.engine.stop();
+    m.engine._returnFundsToFaucet().catch(() => {});
+    const newEngine = new GameEngine({ faucetPk: m.engine.faucetPk, apiKey: apiKey || m.engine.apiKey, agentCount: CONFIG.agentCount });
+    m.engine = newEngine;
+    m.engine.logger.log("♻️ Simulation reset.", "#00e5c8");
+    m.engine.start(m.engine.apiKey, null);
     res.json({ status: "reset" });
 });
 
-// Etherscan redirect helpers
-app.get('/api/explorer/tx/:hash', (req, res) => {
-    res.redirect(`${ETHERSCAN_BASE}/tx/${req.params.hash}`);
-});
-app.get('/api/explorer/address/:address', (req, res) => {
-    res.redirect(`${ETHERSCAN_BASE}/address/${req.params.address}`);
+// ─────────────────────────────────────────────────────────────────────────────
+// x402 PAYMENT GATE
+// ─────────────────────────────────────────────────────────────────────────────
+app.post('/api/missions/:id/action', (req, res) => {
+    const m = missions.get(req.params.id);
+    if (!m) return res.status(404).json({ error: 'Mission not found' });
+    handleX402(req, res, m.engine);
 });
 
-// ── OWS Wallet Creation — EVM ─────────────────────────────────────────────────
+app.post('/api/action', (req, res) => {
+    const m = getFirstActiveMission();
+    if (!m) return res.status(404).json({ error: 'No active mission' });
+    handleX402(req, res, m.engine);
+});
+
+function handleX402(req, res, engine) {
+    const paymentHeader = req.headers['x-payment'];
+    if (!paymentHeader) {
+        return res.status(402).json({
+            x402Version: 1,
+            accepts: [{
+                scheme:            'exact-eth',
+                network:           `eip155:${CHAIN_ID}`,
+                maxAmountRequired: parseEther(CONFIG.movementCostETH).toString(),
+                resource:          `${req.protocol}://${req.get('host')}${req.path}`,
+                description:       'EVOLU-A agent action fee (x402 protocol)',
+                mimeType:          'application/json',
+                payTo:             engine.world.treasuryAddress,
+                maxTimeoutSeconds: 300,
+                asset:             'ETH',
+                extra:             { note: 'Powered by x402 + Sepolia', project: 'EVOLU-A' },
+            }],
+        });
+    }
+    try {
+        const raw     = Buffer.from(paymentHeader, 'base64').toString('utf8');
+        const payload = JSON.parse(raw);
+        if (payload.to?.toLowerCase() !== engine.world.treasuryAddress.toLowerCase()) {
+            return res.status(400).json({ error: 'x402: wrong payment recipient' });
+        }
+        if (payload.signedTx) {
+            publicClient.sendRawTransaction({ serializedTransaction: payload.signedTx })
+                .then(hash => engine.logger.log(`🔗 External x402 Tx: ${hash.slice(0,14)}...`, "#4a6078"))
+                .catch(() => {});
+        }
+        res.set('X-PAYMENT-RESPONSE', Buffer.from(JSON.stringify({ success: true, network: 'sepolia', treasury: engine.world.treasuryAddress })).toString('base64'));
+        return res.json({ ok: true, message: 'Payment received via x402' });
+    } catch (err) {
+        return res.status(400).json({ error: 'x402: invalid payment header' });
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UTILS
+// ─────────────────────────────────────────────────────────────────────────────
+app.get('/api/explorer/tx/:hash',      (req, res) => res.redirect(`${ETHERSCAN_BASE}/tx/${req.params.hash}`));
+app.get('/api/explorer/address/:addr', (req, res) => res.redirect(`${ETHERSCAN_BASE}/address/${req.params.addr}`));
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OWS WALLET REGISTRY (dosyaya persist, 24 saat TTL — PK asla istemciye gönderilmez)
+// ─────────────────────────────────────────────────────────────────────────────
+const WALLET_REGISTRY_FILE = path.join(__dirname, '.wallet_registry.json');
+const WALLET_TTL = 24 * 60 * 60 * 1000;
+
+function loadWalletRegistry() {
+    try {
+        if (fs.existsSync(WALLET_REGISTRY_FILE)) {
+            const data = JSON.parse(fs.readFileSync(WALLET_REGISTRY_FILE, 'utf8'));
+            const now = Date.now();
+            const map = new Map();
+            for (const w of data) {
+                if (now - w.createdAt < WALLET_TTL) map.set(w.id, w);
+            }
+            console.log(`[OWS] Loaded ${map.size} wallet(s) from registry.`);
+            return map;
+        }
+    } catch {}
+    return new Map();
+}
+
+function saveWalletRegistry(registry) {
+    try {
+        fs.writeFileSync(WALLET_REGISTRY_FILE, JSON.stringify([...registry.values()]), 'utf8');
+    } catch (e) {
+        console.error('[OWS] Could not save wallet registry:', e.message);
+    }
+}
+
+const walletRegistry = loadWalletRegistry();
+
+function minEthRequired(agentCount = CONFIG.agentCount) {
+    // agentCount × startingBudget + gas buffer
+    return parseFloat(CONFIG.startingBudgetETH) * agentCount + 0.002;
+}
+
+// Wallet oluştur
 app.post('/api/wallet/create', (req, res) => {
     const { name } = req.body;
-    if (!name || name.trim().length < 1) {
-        return res.status(400).json({ error: 'Wallet name is required' });
-    }
+    if (!name || name.trim().length < 1) return res.status(400).json({ error: 'Wallet name is required' });
     const cleanName = name.trim().replace(/[^a-zA-Z0-9_\-]/g, '_').slice(0, 24);
     try {
-        const pk      = generatePrivateKey();
-        const account = privateKeyToAccount(pk);
-        const address = account.address;
+        const pk       = generatePrivateKey();
+        const account  = privateKeyToAccount(pk);
+        const address  = account.address;
+        const walletId = genId();
 
-        sysLogger.log(`🆕 OWS EVM Wallet: "${cleanName}" → ${address.slice(0, 10)}...`, "#5a8cff");
-        console.log(`[OWS] New wallet: ${cleanName} → ${address}`);
+        walletRegistry.set(walletId, { id: walletId, name: cleanName, address, pk, createdAt: Date.now() });
+        saveWalletRegistry(walletRegistry);
+        setTimeout(() => { walletRegistry.delete(walletId); saveWalletRegistry(walletRegistry); }, WALLET_TTL);
 
+        console.log(`[OWS] Wallet: ${cleanName} → ${address} (id:${walletId})`);
+        // pk sadece bu response'da bir kez döner — sonraki çağrılarda asla gönderilmez
         res.json({
-            ok:          true,
-            name:        cleanName,
-            address,
-            network:     'sepolia',
-            chainId:     CHAIN_ID,
+            ok: true, walletId, name: cleanName, address,
+            pk,                          // ← tek seferlik, kullanıcı yetki alabilsin
+            network: 'sepolia', chainId: CHAIN_ID,
             explorerUrl: `${ETHERSCAN_BASE}/address/${address}`,
+            minEth:     minEthRequired(CONFIG.agentCount).toFixed(4),
+            agentCount: CONFIG.agentCount,
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
+// Bakiye sorgula — adres üzerinden direkt (registry gerekmez, restart-safe)
+app.get('/api/balance/:address', async (req, res) => {
+    const address = req.params.address;
+    if (!address || !/^0x[0-9a-fA-F]{40}$/.test(address)) {
+        return res.status(400).json({ error: 'Invalid address' });
+    }
+    try {
+        const balWei     = await publicClient.getBalance({ address });
+        const balEth     = parseFloat(formatEther(balWei));
+        const minEth     = minEthRequired(CONFIG.agentCount);
+        const sufficient = balEth >= minEth;
+        res.json({
+            address,
+            balance:   balEth.toFixed(6),
+            minEth:    minEth.toFixed(4),
+            sufficient,
+            explorerUrl: `${ETHERSCAN_BASE}/address/${address}`,
+        });
+    } catch (err) {
+        res.status(500).json({ error: `RPC error: ${err.message.slice(0, 60)}` });
+    }
+});
+
+// Eski endpoint — geriye dönük uyumluluk (walletId varsa registry, yoksa 404)
+app.get('/api/wallet/:id/balance', async (req, res) => {
+    const w = walletRegistry.get(req.params.id);
+    if (!w) return res.status(404).json({ error: 'Wallet session expired — use /api/balance/:address instead' });
+    res.redirect(`/api/balance/${w.address}`);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 if (!process.env.VERCEL) {
     app.listen(PORT, () => {
         console.log(`Evolu-A Backend  → Port: ${PORT}`);
         console.log(`Network          → Sepolia (chain ${CHAIN_ID})`);
         console.log(`RPC              → ${SEPOLIA_RPC}`);
-        console.log(`x402 Action Gate → http://localhost:${PORT}/api/action`);
+        console.log(`Multi-mission    → Enabled (max ${CONFIG.maxMissions} concurrent)`);
     });
 }
 
-// ── Graceful Shutdown ────────────────────────────────────────────────────────
 const gracefulShutdown = async () => {
-    console.log('\n⚠️ Server shutting down... Returning balances to faucet wallet.');
-    engine.running = false;
-    await engine._returnFundsToFaucet();
+    console.log('\n⚠️ Server shutting down... Returning all balances to faucets.');
+    const refunds = [...missions.values()].map(m => {
+        m.engine.stop();
+        return m.engine._returnFundsToFaucet();
+    });
+    await Promise.allSettled(refunds);
     process.exit(0);
 };
 
-process.on('SIGINT', gracefulShutdown);
+process.on('SIGINT',  gracefulShutdown);
 process.on('SIGTERM', gracefulShutdown);
 
 export default app;

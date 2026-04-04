@@ -4,8 +4,8 @@
  */
 
 const CONFIG = {
-    gridW: 20,
-    gridH: 20,
+    gridW: 100,
+    gridH: 100,
     cellSize: 40,
 };
 
@@ -37,16 +37,24 @@ const BUBBLE_CELL_W = 128;
 const BUBBLE_CELL_H = 176;
 // We use col=0 row=0 (standard bubble with bottom-left tail)
 
-// ─── Assets ─────────────────────────────────────────────────────────────────
 const floorTiles = [];
-for(let i=0; i<4; i++) {
+const tileNames = [
+    '036', '036', '036', '036', '036',
+    '029', '028', '018', '022', '025', '031', '032', '038', '045'
+];
+for(let t of tileNames) {
     const img = new Image();
-    img.src = 'assets/isometric tileset/separated images/tile_036.png';
+    img.src = `assets/isometric tileset/separated images/tile_${t}.png`;
     floorTiles.push(img);
 }
-const variantImg = new Image();
-variantImg.src = 'assets/isometric tileset/separated images/tile_029.png';
-floorTiles.push(variantImg);
+
+const decorTiles = [];
+const decorNames = ['051', '052', '054', '056', '057', '061', '062', '064', '065', '066', '068'];
+for(let d of decorNames) {
+    const img = new Image();
+    img.src = `assets/isometric tileset/separated images/tile_${d}.png`;
+    decorTiles.push(img);
+}
 
 const waterCanvas = document.createElement('canvas');
 const waterTileBase = new Image();
@@ -72,16 +80,18 @@ bgAssets.food.src    = 'assets/isometric tileset/separated images/tile_048.png';
 bgAssets.gold.src    = 'assets/isometric tileset/separated images/tile_044.png';
 bgAssets.crystal.src = 'assets/isometric tileset/separated images/tile_041.png';
 
-const agentAnimals = {
-    "Collector": new Image(),
-    "Merchant":  new Image(),
-    "Producer":  new Image(),
-    "Legend":    new Image()
+const AGENT_IMG_SRCS = {
+    "Collector": "robot%20level/4.png",
+    "Merchant":  "robot%20level/3.png",
+    "Producer":  "robot%20level/2.png",
+    "Legend":    "robot%20level/1.png",
 };
-agentAnimals["Collector"].src = 'robot level/4.png';
-agentAnimals["Merchant"].src  = 'robot level/3.png';
-agentAnimals["Producer"].src  = 'robot level/2.png';
-agentAnimals["Legend"].src    = 'robot level/1.png';
+const agentAnimals = {};
+for (const [stage, src] of Object.entries(AGENT_IMG_SRCS)) {
+    const img = new Image();
+    img.src = src;
+    agentAnimals[stage] = img;
+}
 
 const avatarImg = new Image();
 avatarImg.src = 'assets/avatar.png';
@@ -102,8 +112,16 @@ const dom = {
 };
 
 // ─── SESSION STATE ───────────────────────────────────────────────────────────
-// Read API key from sessionStorage (set by landing.js on launch)
+// Read mission ID from URL (?mission=XXXXX) or sessionStorage
 const SESSION_API_KEY = sessionStorage.getItem('evolu_apiKey') || '';
+const MISSION_ID = new URLSearchParams(window.location.search).get('mission')
+    || sessionStorage.getItem('evolu_missionId')
+    || null;
+
+// State API endpoint: mission-specific if we have an ID, else legacy
+const STATE_URL  = MISSION_ID ? `${API_URL}/missions/${MISSION_ID}/state`  : `${API_URL}/state`;
+const SETKEY_URL = MISSION_ID ? `${API_URL}/missions/${MISSION_ID}/setkey` : `${API_URL}/setkey`;
+const RESET_URL  = MISSION_ID ? `${API_URL}/missions/${MISSION_ID}/reset`  : `${API_URL}/reset`;
 
 const ctx = dom.canvas.getContext('2d');
 dom.canvas.width  = 1400; // expanded for full isometric diamond view
@@ -189,7 +207,7 @@ dom.filterBtns.forEach(btn => {
 // ─── FETCH STATE ─────────────────────────────────────────────────────────────
 async function fetchState() {
     try {
-        const res = await fetch(`${API_URL}/state`);
+        const res = await fetch(STATE_URL);
         if (!res.ok) return;
         const newState = await res.json();
 
@@ -214,10 +232,53 @@ async function fetchState() {
             dom.simStatus.innerHTML = '';
         }
 
+        // Mission adı ve sahibini göster
+        if (state.missionName) {
+            const nameEl = document.getElementById('missionNameDisplay');
+            const byEl   = document.getElementById('missionCreatedBy');
+            if (nameEl) nameEl.textContent = state.missionName.toUpperCase();
+            if (byEl)   byEl.textContent   = `by ${state.createdBy || 'anonymous'}`;
+        }
+
         renderDOM();
     } catch (e) {
         console.warn("Backend unreachable", e);
     }
+}
+
+// ─── PROCEDURAL TERRAIN (NOISE) ──────────────────────────────────────────────
+function noise(x, y, seed) {
+    let n = 0;
+    n += Math.sin(x * 0.1 + seed) * Math.cos(y * 0.1 + seed);
+    n += Math.sin(x * 0.05 - seed) * Math.cos(y * 0.05 + seed) * 1.5;
+    n += Math.sin(x * 0.2 + seed*2) * Math.cos(y * 0.2 - seed) * 0.5;
+    return n;
+}
+
+function getTerrainInfo(x, y) {
+    const isOut = (x < 0 || x >= CONFIG.gridW || y < 0 || y >= CONFIG.gridH);
+    if (isOut) return { biome: 'water', height: -0.2 };
+
+    const elevation = noise(x, y, 999);
+    const moisture = noise(x, y, 456);
+    
+    let biome = 'plain';
+    let h = 0;
+    
+    if (elevation < -1.0) {
+        biome = 'water';
+        h = -0.2; 
+    } else if (elevation > 1.1) {
+        biome = 'mountain';
+        h = Math.floor((elevation - 1.1) * 2.5) + 1;
+    } else if (elevation < -0.8) {
+        biome = 'sand';
+        h = 0;
+    } else if (moisture > 0.6) {
+        biome = 'forest';
+    }
+    
+    return { biome, height: h };
 }
 
 // ─── CANVAS RENDER ───────────────────────────────────────────────────────────
@@ -232,45 +293,61 @@ function renderCanvas() {
     const offsetX = dom.canvas.width / 2 + panX;
     const offsetY = 120 + panY;
 
-    // Draw Isometric Floor with Water borders
-    const pad = 4; // water boundary
+    // Depth Sorting List
+    let drawables = [];
+
+    // Collect floor tiles, decorations, and boundaries
+    const pad = 10; // water boundary
     for (let y = -pad; y < CONFIG.gridH + pad; y++) {
         for (let x = -pad; x < CONFIG.gridW + pad; x++) {
-            const px = offsetX + (x - y) * (tileW / 2);
-            const py = offsetY + (x + y) * (tileH / 2);
-            
-            const isWater = (x < 0 || x >= CONFIG.gridW || y < 0 || y >= CONFIG.gridH);
-            let img = isWater ? waterCanvas : floorTiles[Math.abs(x * 13 + y * 7) % floorTiles.length];
+            const t = getTerrainInfo(x, y);
 
-            const srcW = img.naturalWidth || img.width;
-            const srcH = img.naturalHeight || img.height;
+            let img;
+            if (t.biome === 'water') {
+                img = waterCanvas;
+                drawables.push({ type: 'floor', img, x, y, z: t.height, isWater: true, depth: x + y });
+            } else {
+                if (t.biome === 'sand') img = floorTiles[5]; // tile_029 variant
+                else img = floorTiles[Math.abs(x * 13 + y * 7) % floorTiles.length];
 
-            if (srcW && srcW > 0) {
-                const drawH = srcH * (tileW / srcW);
-                const shiftY = isWater ? 12 : 0;
-                ctx.drawImage(img, px - tileW/2, py + shiftY, tileW, drawH);
+                // Stack for mountains (draw base to height)
+                for(let h=0; h<=t.height; h++) {
+                    drawables.push({ type: 'floor', img, x, y, z: h, depth: x + y + (h * 0.01) });
+                }
+
+                // Add decorations for forest/plains
+                if (t.biome === 'forest') { // Dense trees
+                    if (Math.abs(x * 11 + y * 19) % 100 < 50) {
+                        drawables.push({ type: 'decor', img: decorTiles[Math.abs(x * 3 + y * 5) % decorTiles.length], x, y, z: t.height, depth: x + y + 0.05 });
+                    }
+                } else if (t.biome === 'plain' || t.biome === 'mountain') { // Sparse decor
+                    if (Math.abs(x * 17 + y * 23) % 100 < 8) {
+                        drawables.push({ type: 'decor', img: decorTiles[Math.abs(x * 3 + y * 5) % decorTiles.length], x, y, z: t.height, depth: x + y + 0.05 });
+                    }
+                }
             }
         }
     }
 
-    // Depth Sorting List
-    let drawables = [];
-    
     // Resources
     state.world.resources.forEach(r => {
+        const t = getTerrainInfo(r.x, r.y);
         drawables.push({
             type: 'resource',
             x: r.x, y: r.y,
+            z: t.height,
             kind: r.kind,
-            depth: r.x + r.y
+            depth: r.x + r.y + 0.06
         });
     });
 
     // Agents
     state.agents.forEach(a => {
+        const t = getTerrainInfo(a.x, a.y);
         drawables.push({
             type: 'agent',
             x: a.x, y: a.y,
+            z: t.biome === 'water' ? Math.max(0, t.height) : t.height, // Sink slightly in water
             data: a,
             depth: a.x + a.y + 0.1 
         });
@@ -281,9 +358,26 @@ function renderCanvas() {
     // Render Sorted Items
     drawables.forEach(item => {
         const px = offsetX + (item.x - item.y) * (tileW / 2);
-        const py = offsetY + (item.x + item.y) * (tileH / 2);
+        const py = offsetY + (item.x + item.y) * (tileH / 2) - ((item.z || 0) * tileH);
 
-        if (item.type === 'resource') {
+        if (item.type === 'floor') {
+            const srcW = item.img.naturalWidth || item.img.width;
+            const srcH = item.img.naturalHeight || item.img.height;
+            if (srcW && srcW > 0) {
+                const drawH = srcH * (tileW / srcW);
+                const shiftY = item.isWater ? 12 : 0;
+                ctx.drawImage(item.img, px - tileW/2, py + shiftY, tileW, drawH);
+            }
+        }
+        else if (item.type === 'decor') {
+            const decImg = item.img;
+            if (decImg && decImg.complete && decImg.naturalWidth > 0) {
+                const drawH = decImg.naturalHeight * (tileW / decImg.naturalWidth);
+                const drawY = py - (drawH - tileH);
+                ctx.drawImage(decImg, px - tileW/2, drawY, tileW, drawH);
+            }
+        } 
+        else if (item.type === 'resource') {
             let rImg = bgAssets[item.kind] || null;
 
             if (rImg && rImg.complete && rImg.naturalWidth > 0) {
@@ -459,7 +553,7 @@ function buildAgentCards() {
             : 'N/A';
         const explorerUrl = `${ETHERSCAN_BASE}/address/${a.evmAddress}`;
 
-        const imgSrc = agentAnimals[a.stage]?.src || 'assets/avatar.png';
+        const imgSrc = AGENT_IMG_SRCS[a.stage] || 'assets/avatar.png';
 
         card.innerHTML = `
             <div class="agent-header">
@@ -570,8 +664,8 @@ function updateAgentCard(a, i) {
 
     if (avatarEl) {
         avatarEl.style.borderColor = color;
-        const expectedSrc = agentAnimals[a.stage]?.src || 'assets/avatar.png';
-        if (!avatarEl.src.includes(expectedSrc)) {
+        const expectedSrc = AGENT_IMG_SRCS[a.stage] || 'assets/avatar.png';
+        if (!avatarEl.src.endsWith(expectedSrc)) {
             avatarEl.src = expectedSrc;
         }
     }
@@ -671,7 +765,7 @@ function renderLog() {
 
 // ─── CONTROLS ────────────────────────────────────────────────────────────────
 dom.btnReset?.addEventListener('click', () => {
-    fetch(`${API_URL}/reset`, { 
+    fetch(RESET_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ apiKey: SESSION_API_KEY })
@@ -680,14 +774,14 @@ dom.btnReset?.addEventListener('click', () => {
 
 document.addEventListener('keydown', e => {
     if (e.key.toLowerCase() === 'r') {
-        fetch(`${API_URL}/reset`, { 
+        fetch(RESET_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ apiKey: SESSION_API_KEY })
         });
     }
     if (e.key === 'Escape') {
-        window.location.href = 'index.html';
+        window.location.href = 'lobby.html';
     }
 });
 
@@ -698,16 +792,15 @@ document.addEventListener('keydown', e => {
 async function syncApiKeyToBackend() {
     if (!SESSION_API_KEY) return;
     try {
-        const res = await fetch(`${API_URL}/state`);
+        const res = await fetch(STATE_URL);
         if (!res.ok) return;
         const st = await res.json();
         // Only re-send if backend is in fallback mode (no key set)
         if (st.isFallbackMode) {
-            const model = sessionStorage.getItem('evolu_model') || '';
-            await fetch(`${API_URL}/start`, {
+            await fetch(SETKEY_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ apiKey: SESSION_API_KEY, model })
+                body: JSON.stringify({ apiKey: SESSION_API_KEY })
             });
             console.log('[EVOLU-A] API key re-synced to backend.');
         }
@@ -729,7 +822,7 @@ if (inlineApplyBtn && inlineKeyInput) {
         if (!key || key.length < 5) return;
         inlineApplyBtn.textContent = '...';
         try {
-            const r = await fetch(`${API_URL}/setkey`, {
+            const r = await fetch(SETKEY_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ apiKey: key })

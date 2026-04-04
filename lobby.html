@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evolu-A | Mission Lobby</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&family=Barlow+Condensed:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #080d1a;
+            --bg2: #0d1526;
+            --bg3: #111d35;
+            --border: rgba(0,229,200,0.12);
+            --teal: #00e5c8;
+            --blue: #5a8cff;
+            --amber: #ffb800;
+            --red: #ff4b55;
+            --green: #4bd77d;
+            --orange: #ff8c42;
+            --text: #c3d2e6;
+            --text-dim: #5a697d;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Barlow Condensed', sans-serif;
+            min-height: 100vh;
+        }
+
+        /* ─── META BAR ─────────────────────────────────────────────────────── */
+        .meta-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background: rgba(0,0,0,0.4);
+            border-bottom: 1px solid var(--border);
+            font-family: 'Fira Code', monospace;
+            font-size: 11px;
+        }
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-dim);
+            text-decoration: none;
+            letter-spacing: 0.08em;
+            transition: color 0.2s;
+        }
+        .back-btn:hover { color: var(--teal); }
+        .key-badge {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 3px;
+            padding: 1px 5px;
+            font-size: 9px;
+        }
+        .meta-title { color: var(--teal); letter-spacing: 0.15em; font-weight: 600; }
+        .meta-sub { color: var(--text-dim); font-size: 10px; }
+
+        /* ─── MAIN ──────────────────────────────────────────────────────────── */
+        .lobby-wrap {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 28px 20px;
+        }
+
+        .lobby-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+        .lobby-title {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+        .lobby-title span { color: var(--teal); }
+        .lobby-subtitle {
+            font-size: 12px;
+            color: var(--text-dim);
+            letter-spacing: 0.06em;
+            margin-top: 3px;
+        }
+
+        .btn-new-mission {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--teal);
+            color: #080d1a;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 20px;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+        .btn-new-mission:hover { opacity: 0.85; }
+
+        /* ─── STATS BAR ─────────────────────────────────────────────────────── */
+        .stats-bar {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-pill {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 8px 16px;
+            font-size: 11px;
+            letter-spacing: 0.06em;
+        }
+        .stat-pill .stat-val {
+            display: block;
+            font-family: 'Fira Code', monospace;
+            font-size: 18px;
+            color: var(--teal);
+            line-height: 1.2;
+        }
+
+        /* ─── MISSION GRID ──────────────────────────────────────────────────── */
+        .mission-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
+        }
+
+        .mission-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 16px;
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+        .mission-card:hover { border-color: rgba(0,229,200,0.3); }
+        .mission-card.live { border-color: rgba(0,229,200,0.25); }
+        .mission-card.ended { opacity: 0.6; }
+
+        .card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .card-name {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #fff;
+        }
+        .card-by {
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-top: 2px;
+        }
+
+        .badge {
+            font-size: 10px;
+            font-family: 'Fira Code', monospace;
+            padding: 3px 8px;
+            border-radius: 3px;
+            letter-spacing: 0.04em;
+            white-space: nowrap;
+        }
+        .badge-live  { background: rgba(0,229,200,0.15); color: var(--teal); border: 1px solid rgba(0,229,200,0.3); }
+        .badge-start { background: rgba(90,140,255,0.15); color: var(--blue); border: 1px solid rgba(90,140,255,0.3); }
+        .badge-ended { background: rgba(255,75,85,0.1); color: var(--red); border: 1px solid rgba(255,75,85,0.2); }
+        .badge-onchain  { background: rgba(255,184,0,0.12); color: var(--amber); border: 1px solid rgba(255,184,0,0.25); margin-left: 6px; }
+        .badge-sim { background: rgba(90,105,125,0.2); color: var(--text-dim); border: 1px solid rgba(90,105,125,0.2); margin-left: 6px; }
+
+        .card-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin: 12px 0;
+        }
+        .card-stat {
+            background: rgba(0,0,0,0.25);
+            border-radius: 3px;
+            padding: 6px 8px;
+        }
+        .cs-label {
+            font-size: 9px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .cs-val {
+            font-family: 'Fira Code', monospace;
+            font-size: 15px;
+            color: #fff;
+            margin-top: 1px;
+        }
+
+        .card-bottom {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+        }
+        .card-id {
+            font-family: 'Fira Code', monospace;
+            font-size: 10px;
+            color: var(--text-dim);
+        }
+        .btn-watch {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0,229,200,0.1);
+            border: 1px solid rgba(0,229,200,0.25);
+            color: var(--teal);
+            border-radius: 4px;
+            padding: 6px 14px;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .btn-watch:hover { background: rgba(0,229,200,0.18); }
+
+        .pulse-dot {
+            display: inline-block;
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: var(--teal);
+            animation: pulse 1.4s ease-in-out infinite;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(0,229,200,0.5); }
+            50% { box-shadow: 0 0 0 5px rgba(0,229,200,0); }
+        }
+
+        /* ─── EMPTY STATE ───────────────────────────────────────────────────── */
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: var(--text-dim);
+        }
+        .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+        .empty-title { font-size: 20px; font-weight: 600; letter-spacing: 0.08em; margin-bottom: 8px; }
+        .empty-sub { font-size: 13px; }
+
+        /* ─── REFRESH BAR ───────────────────────────────────────────────────── */
+        .refresh-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-bottom: 16px;
+            font-family: 'Fira Code', monospace;
+        }
+        .refresh-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--green);
+        }
+    </style>
+</head>
+<body>
+
+<!-- ─── META BAR ────────────────────────────────────────────────────────────── -->
+<div class="meta-bar">
+    <a href="index.html" class="back-btn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        <span class="key-badge">ESC</span> BACK
+    </a>
+    <div>
+        <span class="meta-title">MISSION LOBBY</span>
+        <span style="color:rgba(195,210,230,0.3);margin:0 8px">|</span>
+        <span class="meta-sub">EVOLU-A PROTOCOL</span>
+    </div>
+    <div style="font-family:'Fira Code',monospace;font-size:10px;color:var(--text-dim)" id="lastUpdated">—</div>
+</div>
+
+<!-- ─── MAIN ─────────────────────────────────────────────────────────────────── -->
+<div class="lobby-wrap">
+
+    <div class="lobby-header">
+        <div>
+            <div class="lobby-title">ACTIVE <span>MISSIONS</span></div>
+            <div class="lobby-subtitle">Watch AI agents survive on Sepolia EVM in real time</div>
+        </div>
+        <a href="index.html" class="btn-new-mission">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            NEW MISSION
+        </a>
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat-pill">
+            <span class="stat-val" id="statTotal">0</span>
+            TOTAL MISSIONS
+        </div>
+        <div class="stat-pill">
+            <span class="stat-val" id="statLive">0</span>
+            LIVE NOW
+        </div>
+        <div class="stat-pill">
+            <span class="stat-val" id="statAgents">0</span>
+            ALIVE AGENTS
+        </div>
+        <div class="stat-pill">
+            <span class="stat-val" id="statOnChain">0</span>
+            ON-CHAIN
+        </div>
+    </div>
+
+    <div class="refresh-bar">
+        <div class="refresh-dot"></div>
+        Auto-refreshing every 3 seconds
+    </div>
+
+    <div class="mission-grid" id="missionGrid">
+        <div class="empty-state">
+            <div class="empty-icon">📡</div>
+            <div class="empty-title">No missions yet</div>
+            <div class="empty-sub">Start a new mission to see it here</div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const API_URL = '/api';
+
+function timeAgo(ts) {
+    const diff = Date.now() - ts;
+    const s = Math.floor(diff / 1000);
+    if (s < 60)  return `${s}s ago`;
+    const m = Math.floor(s / 60);
+    if (m < 60)  return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    return `${h}h ago`;
+}
+
+function renderMissions(list) {
+    const grid = document.getElementById('missionGrid');
+
+    // Stats
+    const live    = list.filter(m => m.running || m.starting).length;
+    const agents  = list.reduce((s, m) => s + (m.aliveAgents || 0), 0);
+    const onchain = list.filter(m => m.isOnChain).length;
+    document.getElementById('statTotal').textContent   = list.length;
+    document.getElementById('statLive').textContent    = live;
+    document.getElementById('statAgents').textContent  = agents;
+    document.getElementById('statOnChain').textContent = onchain;
+
+    if (list.length === 0) {
+        grid.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📡</div>
+                <div class="empty-title">No missions yet</div>
+                <div class="empty-sub">Be the first — start a new mission!</div>
+            </div>`;
+        return;
+    }
+
+    grid.innerHTML = list.map(m => {
+        const isLive    = m.running || m.starting;
+        const isStarting = m.starting;
+        const cardClass  = isLive ? 'live' : 'ended';
+
+        let statusBadge;
+        if (isStarting) {
+            statusBadge = `<span class="badge badge-start"><span class="pulse-dot" style="background:#5a8cff"></span>Starting</span>`;
+        } else if (isLive) {
+            statusBadge = `<span class="badge badge-live"><span class="pulse-dot"></span>Live</span>`;
+        } else {
+            statusBadge = `<span class="badge badge-ended">Ended</span>`;
+        }
+
+        const chainBadge = m.isOnChain
+            ? `<span class="badge badge-onchain">⚡ On-Chain</span>`
+            : `<span class="badge badge-sim">Sim</span>`;
+
+        return `
+        <div class="mission-card ${cardClass}">
+            <div class="card-top">
+                <div>
+                    <div class="card-name">${escHtml(m.name)}</div>
+                    <div class="card-by">by ${escHtml(m.createdBy)} · ${timeAgo(m.createdAt)}</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:flex-end">
+                    ${statusBadge}${chainBadge}
+                </div>
+            </div>
+            <div class="card-stats">
+                <div class="card-stat">
+                    <div class="cs-label">Agents</div>
+                    <div class="cs-val" style="color:${m.aliveAgents > 0 ? '#4bd77d' : '#ff4b55'}">${m.aliveAgents}/${m.totalAgents}</div>
+                </div>
+                <div class="card-stat">
+                    <div class="cs-label">Turns</div>
+                    <div class="cs-val">${m.turnCount}</div>
+                </div>
+                <div class="card-stat">
+                    <div class="cs-label">Treasury</div>
+                    <div class="cs-val" style="font-size:12px">${(m.contractBalance || 0).toFixed(4)}</div>
+                </div>
+            </div>
+            <div class="card-bottom">
+                <span class="card-id">#${m.id}</span>
+                <a class="btn-watch" href="game.html?mission=${m.id}">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    WATCH
+                </a>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function fetchAndRender() {
+    try {
+        const res  = await fetch(`${API_URL}/missions`);
+        if (!res.ok) return;
+        const list = await res.json();
+        renderMissions(list);
+        document.getElementById('lastUpdated').textContent = `Updated ${new Date().toLocaleTimeString()}`;
+    } catch { /* silent */ }
+}
+
+fetchAndRender();
+setInterval(fetchAndRender, 3000);
+</script>
+</body>
+</html>
